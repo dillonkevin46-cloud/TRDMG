@@ -37,10 +37,34 @@ class DailyTaskListView(BaseTaskListView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        today = timezone.now().date()
-        # Daily: Tasks created today or active tasks (not completed) that are due/started.
-        # Filtering by tasks updated or started today as an example of "Daily" relevance.
-        return qs.filter(updated_at__date=today)
+
+        date_str = self.request.GET.get('date')
+        if date_str:
+            try:
+                from datetime import datetime
+                selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                selected_date = timezone.now().date()
+        else:
+            selected_date = timezone.now().date()
+
+        return qs.filter(updated_at__date=selected_date)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        date_str = self.request.GET.get('date')
+        if date_str:
+            try:
+                from datetime import datetime
+                selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                selected_date = timezone.now().date()
+        else:
+            selected_date = timezone.now().date()
+
+        context['selected_date'] = selected_date
+        return context
 
 class WeeklyTaskListView(BaseTaskListView):
     template_name = 'todo/task_list_weekly.html'

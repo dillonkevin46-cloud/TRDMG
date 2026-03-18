@@ -7,7 +7,7 @@
 <div class="max-w-xl mx-auto mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
     <div class="px-8 py-6 border-b border-slate-100 bg-slate-50">
         <h3 class="text-xl font-bold text-slate-800">Add KPI Task</h3>
-        <p class="text-sm text-slate-500 mt-1">Grade a staff member's performance.</p>
+        <p class="text-sm text-slate-500 mt-1">Log a Yes/No performance metric for a staff member.</p>
     </div>
 
     <div class="px-8 py-8">
@@ -55,7 +55,7 @@
 <script>
     // Style Django form fields dynamically with Tailwind classes
     document.addEventListener('DOMContentLoaded', function() {
-        const inputs = document.querySelectorAll('input[type="text"], input[type="number"], select, textarea');
+        const inputs = document.querySelectorAll('input[type="text"], select, textarea');
         inputs.forEach(input => {
             input.classList.add(
                 'block', 'w-full', 'rounded-lg', 'border-slate-300', 'shadow-sm',
