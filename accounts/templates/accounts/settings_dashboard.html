@@ -1,47 +1,134 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Settings Dashboard</title>
-</head>
-<body>
-    <h1>Settings Dashboard</h1>
+{% extends 'base.html' %}
 
-    {% if messages %}
-    <ul class="messages">
-        {% for message in messages %}
-        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
+{% block title %}Tradecore - Settings Dashboard{% endblock %}
+{% block header_title %}Settings Dashboard{% endblock %}
 
-    <h2>Staff Users</h2>
-    <a href="{% url 'accounts:add_staff' %}">Add Staff</a>
-    <ul>
-        {% for staff in staff_users %}
-        <li>
-            {{ staff.username }} - Dept: {{ staff.department }} - Manager: {{ staff.manager }}
-            <a href="{% url 'accounts:edit_staff' staff.id %}">Edit</a>
-            <a href="{% url 'accounts:remove_staff' staff.id %}">Remove</a>
-            <a href="{% url 'accounts:reset_staff_password' staff.id %}">Reset Password</a>
-        </li>
-        {% empty %}
-        <li>No staff users found.</li>
-        {% endfor %}
-    </ul>
+{% block content %}
+<div class="space-y-8">
 
-    <h2>Departments</h2>
-    <a href="{% url 'accounts:add_department' %}">Add Department</a>
-    <ul>
-        {% for dept in departments %}
-        <li>
-            {{ dept.name }}
-            <a href="{% url 'accounts:edit_department' dept.id %}">Edit</a>
-            <a href="{% url 'accounts:remove_department' dept.id %}">Remove</a>
-        </li>
-        {% empty %}
-        <li>No departments found.</li>
-        {% endfor %}
-    </ul>
-</body>
-</html>
+    <!-- Staff Users Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-800">Staff Users</h3>
+                <p class="text-sm text-slate-500 mt-1">Manage team members and their roles.</p>
+            </div>
+            <a href="{% url 'accounts:add_staff' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Staff
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="uppercase tracking-wider border-b border-slate-200 bg-slate-50 text-slate-500">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 font-medium">User</th>
+                        <th scope="col" class="px-6 py-3 font-medium">Role</th>
+                        <th scope="col" class="px-6 py-3 font-medium">Department</th>
+                        <th scope="col" class="px-6 py-3 font-medium">Manager</th>
+                        <th scope="col" class="px-6 py-3 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for staff in staff_users %}
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs uppercase">
+                                    {{ staff.username|make_list|first }}
+                                </div>
+                                <div>
+                                    <p class="font-medium text-slate-900">{{ staff.username }}</p>
+                                    <p class="text-xs text-slate-500">{{ staff.email }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ staff.role }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-600">
+                            {{ staff.department.name|default:"—" }}
+                        </td>
+                        <td class="px-6 py-4 text-slate-600">
+                            {{ staff.manager.username|default:"—" }}
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm font-medium">
+                            <div class="flex justify-end gap-3">
+                                <a href="{% url 'accounts:edit_staff' staff.id %}" class="text-indigo-600 hover:text-indigo-900 transition-colors">Edit</a>
+                                <span class="text-slate-300">|</span>
+                                <a href="{% url 'accounts:reset_staff_password' staff.id %}" class="text-slate-600 hover:text-slate-900 transition-colors">Password</a>
+                                <span class="text-slate-300">|</span>
+                                <a href="{% url 'accounts:remove_staff' staff.id %}" class="text-red-600 hover:text-red-900 transition-colors">Remove</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-slate-500">
+                            No staff users found. Click 'Add Staff' to create one.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Departments Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-800">Departments</h3>
+                <p class="text-sm text-slate-500 mt-1">Organize your workspace structure.</p>
+            </div>
+            <a href="{% url 'accounts:add_department' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Department
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="uppercase tracking-wider border-b border-slate-200 bg-slate-50 text-slate-500">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 font-medium">Name</th>
+                        <th scope="col" class="px-6 py-3 font-medium">Description</th>
+                        <th scope="col" class="px-6 py-3 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for dept in departments %}
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="px-6 py-4 font-medium text-slate-900">
+                            {{ dept.name }}
+                        </td>
+                        <td class="px-6 py-4 text-slate-600 max-w-xs truncate">
+                            {{ dept.description|default:"—" }}
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm font-medium">
+                            <div class="flex justify-end gap-3">
+                                <a href="{% url 'accounts:edit_department' dept.id %}" class="text-indigo-600 hover:text-indigo-900 transition-colors">Edit</a>
+                                <span class="text-slate-300">|</span>
+                                <a href="{% url 'accounts:remove_department' dept.id %}" class="text-red-600 hover:text-red-900 transition-colors">Remove</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="px-6 py-8 text-center text-slate-500">
+                            No departments found. Click 'Add Department' to create one.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
