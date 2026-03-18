@@ -2,19 +2,21 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from accounts.decorators import management_or_superuser_required
 from .models import KPITask
 from todo.models import Task
 from django.utils import timezone
 from datetime import timedelta
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
 from django.contrib.auth import get_user_model
 import random
 import json
 
-# We catch OSError here because Windows throws it when GTK3 is missing
 try:
     from weasyprint import HTML, CSS
-except (ImportError, OSError):
+except ImportError:
     HTML = None
 
 User = get_user_model()
@@ -43,6 +45,8 @@ def management_dashboard(request):
 
     # Example logic: Random KPI scores (or query actual KPITask objects)
     # We will simulate data for demonstration of the UI requirements
+    import random
+
     for i in range(13, -1, -1):
         date = today - timedelta(days=i)
         # 0 = Monday, 6 = Sunday
@@ -53,6 +57,8 @@ def management_dashboard(request):
         is_weekend.append(is_wknd)
 
         # Query actual KPITask data
+        # Assuming we want the average grade for tasks created on that day
+        # For a production system, this would be optimized with a GroupBy/Annotate query
         if selected_staff:
             daily_tasks = KPITask.objects.filter(
                 staff_member=selected_staff,
@@ -89,7 +95,7 @@ def download_staff_report_pdf(request, staff_id):
     # 1. Fetch Task History
     tasks = Task.objects.filter(assigned_to=staff_user).order_by('-created_at')[:50]
 
-    # 2. Generate KPI Data
+    # 2. Generate KPI Data (same logic as dashboard for consistency)
     today = timezone.now().date()
     kpi_data = []
 
@@ -126,17 +132,33 @@ def download_staff_report_pdf(request, staff_id):
     # Render HTML template to string
     html_string = render_to_string('kpi/pdf_report.html', context)
 
-    # Check if WeasyPrint loaded successfully
     if HTML is None:
-        return HttpResponse("WeasyPrint is not installed or configured correctly on this Windows Server. Please install the GTK3 Runtime.", status=500)
+        return HttpResponse("WeasyPrint is not installed or configured correctly.", status=500)
 
     # Generate PDF
     html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+    # Use presentational_hints=True to process basic HTML attributes like bgcolor if any
     pdf = html.write_pdf(presentational_hints=True)
 
     # Create HttpResponse with PDF content type
     response = HttpResponse(pdf, content_type='application/pdf')
+    # Set Content-Disposition to force download with specific filename
     filename = f"{staff_user.username}_Report.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     return response
+
+class KPITaskCreateView(LoginRequiredMixin, CreateView):
+    model = KPITask
+    template_name = 'kpi/kpi_task_form.html'
+    fields = ['title', 'description', 'staff_member', 'grade']
+    success_url = reverse_lazy('kpi:management_dashboard')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['staff_member'].queryset = User.objects.filter(role='Staff')
+        return form
+
+    def form_valid(self, form):
+        form.instance.graded_by = self.request.user
+        return super().form_valid(form)

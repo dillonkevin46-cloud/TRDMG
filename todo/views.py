@@ -1,4 +1,4 @@
-from django.views.generic import ListView, UpdateView
+from django.views.generic import ListView, UpdateView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
 from datetime import timedelta
@@ -6,6 +6,9 @@ from django.urls import reverse_lazy
 from django.db.models import Q
 from .models import Task
 from .forms import TaskStatusUpdateForm
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class BaseTaskListView(LoginRequiredMixin, ListView):
     model = Task
@@ -84,3 +87,18 @@ class TaskStatusUpdateView(LoginRequiredMixin, UpdateView):
         self.object = form.save(user=self.request.user)
         from django.http import HttpResponseRedirect
         return HttpResponseRedirect(self.get_success_url())
+
+class TaskCreateView(LoginRequiredMixin, CreateView):
+    model = Task
+    template_name = 'todo/task_form.html'
+    fields = ['title', 'description', 'status', 'assigned_to']
+    success_url = reverse_lazy('todo:task-list-daily')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['assigned_to'].queryset = User.objects.filter(role='Staff')
+        return form
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)

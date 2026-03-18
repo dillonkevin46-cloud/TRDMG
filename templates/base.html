@@ -64,12 +64,14 @@
                 <span class="font-medium">Tasks</span>
             </a>
 
+            {% if user.role == 'Management' or user.is_superuser %}
             <a href="/kpi/dashboard/" class="flex items-center gap-3 px-3 py-2 text-slate-600 rounded-md hover:bg-slate-100 transition-colors group">
                 <svg class="w-5 h-5 text-slate-400 group-hover:text-green-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                 </svg>
                 <span class="font-medium">KPIs</span>
             </a>
+            {% endif %}
 
             {% if user.role == 'Management' or user.is_superuser %}
             <div class="pt-4 pb-2">
@@ -81,6 +83,15 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <span class="font-medium">Settings</span>
+            </a>
+            {% endif %}
+
+            {% if user.is_superuser %}
+            <a href="/admin/" class="flex items-center gap-3 px-3 py-2 text-slate-600 rounded-md hover:bg-slate-100 transition-colors group">
+                <svg class="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                </svg>
+                <span class="font-medium">Backend Admin</span>
             </a>
             {% endif %}
         </div>
