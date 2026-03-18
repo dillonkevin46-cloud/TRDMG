@@ -28,3 +28,5 @@ urlpatterns = [
     path("accounts/", include("django.contrib.auth.urls")), 
     path("kpi/", include("kpi.urls")),
 ]
+    path("auth/", include("django.contrib.auth.urls")),
+]
