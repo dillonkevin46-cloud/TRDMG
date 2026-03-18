@@ -3,7 +3,6 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.decorators.http import require_POST
 from accounts.decorators import management_or_superuser_required
 from .models import KPITask
 from todo.models import Task
@@ -12,8 +11,6 @@ from datetime import timedelta
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.contrib.auth import get_user_model
-from urllib.parse import urlencode
-import random
 import json
 
 # Windows specific fix: Catching OSError so WeasyPrint doesn't crash the server
@@ -70,7 +67,10 @@ def management_dashboard(request):
         else:
             data_points.append(0)
 
-    staff_kpi_tasks = KPITask.objects.filter(staff_member=selected_staff).order_by('-created_at') if selected_staff else None
+    # Get all KPI tasks for the selected staff to display in the table
+    staff_kpi_tasks = None
+    if selected_staff:
+        staff_kpi_tasks = KPITask.objects.filter(staff_member=selected_staff).order_by('-created_at')
 
     context = {
         'staff_users': staff_users,
@@ -82,6 +82,21 @@ def management_dashboard(request):
     }
 
     return render(request, 'kpi/management_dashboard.html', context)
+
+@login_required
+@management_or_superuser_required
+def update_kpi_status(request, task_id):
+    """
+    Updates the status of a KPITask from the dashboard table.
+    """
+    if request.method == 'POST':
+        task = get_object_or_404(KPITask, id=task_id)
+        new_status = request.POST.get('status')
+        if new_status in ['Yes', 'No', 'Pending']:
+            task.status = new_status
+            task.save()
+        return redirect(f"/kpi/dashboard/?staff_id={task.staff_member.id}")
+    return redirect('kpi:management_dashboard')
 
 @login_required
 @management_or_superuser_required
@@ -150,7 +165,10 @@ class KPITaskCreateView(LoginRequiredMixin, CreateView):
     model = KPITask
     template_name = 'kpi/kpi_task_form.html'
     fields = ['title', 'description', 'staff_member', 'status']
-    success_url = reverse_lazy('kpi:management_dashboard')
+    
+    def get_success_url(self):
+        # Redirect directly to the specific staff member's dashboard tab
+        return f"/kpi/dashboard/?staff_id={self.object.staff_member.id}"
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -159,22 +177,4 @@ class KPITaskCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.graded_by = self.request.user
-        return super().form_valid(form)
-
-@login_required
-@management_or_superuser_required
-@require_POST
-def update_kpi_status(request, task_id):
-    task = get_object_or_404(KPITask, id=task_id)
-    new_status = request.POST.get('status')
-
-    if new_status in dict(KPITask._meta.get_field('status').choices):
-        task.status = new_status
-        task.graded_by = request.user
-        task.save()
-
-    base_url = reverse_lazy('kpi:management_dashboard')
-    query_string = urlencode({'staff_id': task.staff_member.id})
-    url = f"{base_url}?{query_string}"
-    return redirect(url)
         return super().form_valid(form)
