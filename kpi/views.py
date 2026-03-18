@@ -16,9 +16,10 @@ from urllib.parse import urlencode
 import random
 import json
 
+# Windows specific fix: Catching OSError so WeasyPrint doesn't crash the server
 try:
     from weasyprint import HTML, CSS
-except ImportError:
+except (ImportError, OSError):
     HTML = None
 
 User = get_user_model()
@@ -28,8 +29,6 @@ User = get_user_model()
 def management_dashboard(request):
     """
     Management Dashboard showing KPIs for Staff members.
-    For this example, we generate dummy daily KPI data for a specific staff member
-    to demonstrate the Chart.js integration separating weekends from weekdays.
     """
     staff_users = User.objects.filter(role='Staff')
     selected_staff_id = request.GET.get('staff_id')
@@ -45,30 +44,24 @@ def management_dashboard(request):
     data_points = []
     is_weekend = []
 
-    # Example logic: Random KPI scores (or query actual KPITask objects)
-    # We will simulate data for demonstration of the UI requirements
-    import random
-
     for i in range(13, -1, -1):
         date = today - timedelta(days=i)
-        # 0 = Monday, 6 = Sunday
         weekday = date.weekday()
 
         labels.append(date.strftime("%a, %b %d"))
         is_wknd = weekday >= 5
         is_weekend.append(is_wknd)
 
-        # Query actual KPITask data
-        # Assuming we want the average grade for tasks created on that day
-        # For a production system, this would be optimized with a GroupBy/Annotate query
+        # Query actual KPITask data, filtering out 'Pending' statuses
         if selected_staff:
             daily_tasks = KPITask.objects.filter(
                 staff_member=selected_staff,
-                created_at__date=date
-            ).exclude(status='Pending')
+                created_at__date=date,
+                status__in=['Yes', 'No']
+            )
 
             if daily_tasks.exists():
-                # 'Yes' is 100, 'No' is 0
+                # Yes = 100, No = 0
                 total_score = sum(100 for t in daily_tasks if t.status == 'Yes')
                 avg_grade = total_score / daily_tasks.count()
                 data_points.append(round(avg_grade, 1))
@@ -95,27 +88,26 @@ def management_dashboard(request):
 def download_staff_report_pdf(request, staff_id):
     """
     Generates a PDF report using WeasyPrint for a specific staff member.
-    Includes Task History and KPI Graph data.
     """
     staff_user = get_object_or_404(User, id=staff_id, role='Staff')
 
     # 1. Fetch Task History
     tasks = Task.objects.filter(assigned_to=staff_user).order_by('-created_at')[:50]
 
-    # 2. Generate KPI Data (same logic as dashboard for consistency)
+    # 2. Generate KPI Data 
     today = timezone.now().date()
     kpi_data = []
 
     for i in range(13, -1, -1):
         date = today - timedelta(days=i)
         weekday = date.weekday()
-
         is_wknd = weekday >= 5
 
         daily_tasks = KPITask.objects.filter(
             staff_member=staff_user,
-            created_at__date=date
-        ).exclude(status='Pending')
+            created_at__date=date,
+            status__in=['Yes', 'No']
+        )
 
         if daily_tasks.exists():
             total_score = sum(100 for t in daily_tasks if t.status == 'Yes')
@@ -145,12 +137,10 @@ def download_staff_report_pdf(request, staff_id):
 
     # Generate PDF
     html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
-    # Use presentational_hints=True to process basic HTML attributes like bgcolor if any
     pdf = html.write_pdf(presentational_hints=True)
 
     # Create HttpResponse with PDF content type
     response = HttpResponse(pdf, content_type='application/pdf')
-    # Set Content-Disposition to force download with specific filename
     filename = f"{staff_user.username}_Report.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
@@ -187,3 +177,4 @@ def update_kpi_status(request, task_id):
     query_string = urlencode({'staff_id': task.staff_member.id})
     url = f"{base_url}?{query_string}"
     return redirect(url)
+        return super().form_valid(form)
