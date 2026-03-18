@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Tradecore - Update Task{% endblock %}
+{% block header_title %}Update Task{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-slate-800">{{ task.title }}</h3>
+        <span class="px-2.5 py-1 text-xs font-semibold rounded-full
+            {% if task.status == 'Not Started' %}bg-gray-100 text-gray-800
+            {% elif task.status == 'Started' %}bg-blue-100 text-blue-800
+            {% elif task.status == 'Completed' %}bg-green-100 text-green-800
+            {% elif task.status == 'Stuck' %}bg-red-100 text-red-800
+            {% endif %}">
+            {{ task.status }}
+        </span>
+    </div>
+
+    <div class="px-6 py-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="p-4 rounded-md bg-red-50 border border-red-200 text-red-700">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div>
+                <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                <div class="relative">
+                    {{ form.status }}
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </div>
+                {% if form.status.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.status.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div id="comment-section" class="{% if form.status.value != 'Stuck' and not form.comment_text.errors %}hidden{% endif %} transition-all duration-300 ease-in-out">
+                <label for="{{ form.comment_text.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">Comment (Required if Stuck)</label>
+                {{ form.comment_text }}
+                {% if form.comment_text.help_text %}
+                    <p class="mt-1 text-xs text-slate-500">{{ form.comment_text.help_text }}</p>
+                {% endif %}
+                {% if form.comment_text.errors %}
+                    <p class="mt-2 text-sm text-red-600 font-medium">{{ form.comment_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center gap-3 pt-4 border-t border-slate-100">
+                <button type="submit" class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    Update Status
+                </button>
+                <a href="javascript:history.back()" class="inline-flex justify-center rounded-md border border-slate-300 bg-white py-2 px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    Cancel
+                </a>
+            </div>
+        </form>
+
+        <!-- Existing Comments -->
+        {% if task.comments.all %}
+        <div class="mt-8 pt-6 border-t border-slate-200">
+            <h4 class="text-sm font-medium text-slate-900 mb-4">Activity Log</h4>
+            <div class="space-y-4">
+                {% for comment in task.comments.all %}
+                <div class="flex gap-3">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0 text-xs font-bold text-indigo-700 uppercase">
+                        {{ comment.user.username|make_list|first }}
+                    </div>
+                    <div class="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-100">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-medium text-slate-900">{{ comment.user.username }}</span>
+                            <span class="text-xs text-slate-500">{{ comment.created_at|timesince }} ago</span>
+                        </div>
+                        <p class="text-sm text-slate-700">{{ comment.text }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusSelect = document.getElementById('{{ form.status.id_for_label }}');
+        const commentSection = document.getElementById('comment-section');
+
+        // Add Tailwind classes to Django form elements
+        if(statusSelect) {
+            statusSelect.classList.add('mt-1', 'block', 'w-full', 'rounded-md', 'border-slate-300', 'py-2', 'pl-3', 'pr-10', 'text-base', 'focus:border-indigo-500', 'focus:outline-none', 'focus:ring-indigo-500', 'sm:text-sm', 'appearance-none');
+        }
+
+        const commentTextarea = document.getElementById('{{ form.comment_text.id_for_label }}');
+        if(commentTextarea) {
+            commentTextarea.classList.add('mt-1', 'block', 'w-full', 'rounded-md', 'border-slate-300', 'shadow-sm', 'focus:border-indigo-500', 'focus:ring-indigo-500', 'sm:text-sm', 'p-2');
+        }
+
+        function toggleCommentSection() {
+            if (statusSelect.value === 'Stuck') {
+                commentSection.classList.remove('hidden');
+            } else {
+                {% if not form.comment_text.errors %}
+                commentSection.classList.add('hidden');
+                {% endif %}
+            }
+        }
+
+        if(statusSelect) {
+            statusSelect.addEventListener('change', toggleCommentSection);
+            // Initial run
+            toggleCommentSection();
+        }
+    });
+</script>
+{% endblock %}
