@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "accounts",
     "todo",
+    "kpi",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
