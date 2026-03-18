@@ -11,9 +11,10 @@ from django.contrib.auth import get_user_model
 import random
 import json
 
+# We catch OSError here because Windows throws it when GTK3 is missing
 try:
     from weasyprint import HTML, CSS
-except ImportError:
+except (ImportError, OSError):
     HTML = None
 
 User = get_user_model()
@@ -42,8 +43,6 @@ def management_dashboard(request):
 
     # Example logic: Random KPI scores (or query actual KPITask objects)
     # We will simulate data for demonstration of the UI requirements
-    import random
-
     for i in range(13, -1, -1):
         date = today - timedelta(days=i)
         # 0 = Monday, 6 = Sunday
@@ -54,8 +53,6 @@ def management_dashboard(request):
         is_weekend.append(is_wknd)
 
         # Query actual KPITask data
-        # Assuming we want the average grade for tasks created on that day
-        # For a production system, this would be optimized with a GroupBy/Annotate query
         if selected_staff:
             daily_tasks = KPITask.objects.filter(
                 staff_member=selected_staff,
@@ -92,7 +89,7 @@ def download_staff_report_pdf(request, staff_id):
     # 1. Fetch Task History
     tasks = Task.objects.filter(assigned_to=staff_user).order_by('-created_at')[:50]
 
-    # 2. Generate KPI Data (same logic as dashboard for consistency)
+    # 2. Generate KPI Data
     today = timezone.now().date()
     kpi_data = []
 
@@ -129,17 +126,16 @@ def download_staff_report_pdf(request, staff_id):
     # Render HTML template to string
     html_string = render_to_string('kpi/pdf_report.html', context)
 
+    # Check if WeasyPrint loaded successfully
     if HTML is None:
-        return HttpResponse("WeasyPrint is not installed or configured correctly.", status=500)
+        return HttpResponse("WeasyPrint is not installed or configured correctly on this Windows Server. Please install the GTK3 Runtime.", status=500)
 
     # Generate PDF
     html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
-    # Use presentational_hints=True to process basic HTML attributes like bgcolor if any
     pdf = html.write_pdf(presentational_hints=True)
 
     # Create HttpResponse with PDF content type
     response = HttpResponse(pdf, content_type='application/pdf')
-    # Set Content-Disposition to force download with specific filename
     filename = f"{staff_user.username}_Report.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 

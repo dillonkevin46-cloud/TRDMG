@@ -24,6 +24,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("todo/", include("todo.urls")),
     path("accounts/", include("accounts.urls")),
+    # This line adds all the built-in login/logout routes automatically!
+    path("accounts/", include("django.contrib.auth.urls")), 
     path("kpi/", include("kpi.urls")),
+]
     path("auth/", include("django.contrib.auth.urls")),
 ]
