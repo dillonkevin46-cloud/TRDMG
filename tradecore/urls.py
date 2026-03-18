@@ -25,4 +25,5 @@ urlpatterns = [
     path("todo/", include("todo.urls")),
     path("accounts/", include("accounts.urls")),
     path("kpi/", include("kpi.urls")),
+    path("auth/", include("django.contrib.auth.urls")),
 ]
