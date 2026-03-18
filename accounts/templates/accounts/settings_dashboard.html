@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settings Dashboard</title>
+</head>
+<body>
+    <h1>Settings Dashboard</h1>
+
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <h2>Staff Users</h2>
+    <a href="{% url 'accounts:add_staff' %}">Add Staff</a>
+    <ul>
+        {% for staff in staff_users %}
+        <li>
+            {{ staff.username }} - Dept: {{ staff.department }} - Manager: {{ staff.manager }}
+            <a href="{% url 'accounts:edit_staff' staff.id %}">Edit</a>
+            <a href="{% url 'accounts:remove_staff' staff.id %}">Remove</a>
+            <a href="{% url 'accounts:reset_staff_password' staff.id %}">Reset Password</a>
+        </li>
+        {% empty %}
+        <li>No staff users found.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Departments</h2>
+    <a href="{% url 'accounts:add_department' %}">Add Department</a>
+    <ul>
+        {% for dept in departments %}
+        <li>
+            {{ dept.name }}
+            <a href="{% url 'accounts:edit_department' dept.id %}">Edit</a>
+            <a href="{% url 'accounts:remove_department' dept.id %}">Remove</a>
+        </li>
+        {% empty %}
+        <li>No departments found.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
