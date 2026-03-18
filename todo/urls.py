@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import DailyTaskListView, WeeklyTaskListView, MonthlyTaskListView, TaskStatusUpdateView
+from .views import DailyTaskListView, WeeklyTaskListView, MonthlyTaskListView, TaskStatusUpdateView, TaskCreateView
 
 app_name = 'todo'
 
@@ -8,4 +8,5 @@ urlpatterns = [
     path('weekly/', WeeklyTaskListView.as_view(), name='task-list-weekly'),
     path('monthly/', MonthlyTaskListView.as_view(), name='task-list-monthly'),
     path('<int:pk>/update/', TaskStatusUpdateView.as_view(), name='task-update'),
+    path('task-create/', TaskCreateView.as_view(), name='task-create'),
 ]

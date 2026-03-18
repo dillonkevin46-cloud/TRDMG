@@ -105,10 +105,12 @@
     <!-- Table Footer -->
     <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center text-xs text-slate-500">
         <span>{{ tasks|length }} items</span>
-        <button class="flex items-center gap-1 text-slate-600 hover:text-slate-900">
+        {% if user.role == 'Management' or user.is_superuser %}
+        <a href="{% url 'todo:task-create' %}" class="flex items-center gap-1 text-slate-600 hover:text-slate-900">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             New Task
-        </button>
+        </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
