@@ -1,8 +1,9 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.decorators.http import require_POST
 from accounts.decorators import management_or_superuser_required
 from .models import KPITask
 from todo.models import Task
@@ -11,6 +12,7 @@ from datetime import timedelta
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.contrib.auth import get_user_model
+from urllib.parse import urlencode
 import random
 import json
 
@@ -75,12 +77,15 @@ def management_dashboard(request):
         else:
             data_points.append(0)
 
+    staff_kpi_tasks = KPITask.objects.filter(staff_member=selected_staff).order_by('-created_at') if selected_staff else None
+
     context = {
         'staff_users': staff_users,
         'selected_staff': selected_staff,
         'labels_json': json.dumps(labels),
         'data_points_json': json.dumps(data_points),
         'is_weekend_json': json.dumps(is_weekend),
+        'staff_kpi_tasks': staff_kpi_tasks,
     }
 
     return render(request, 'kpi/management_dashboard.html', context)
@@ -165,3 +170,20 @@ class KPITaskCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.graded_by = self.request.user
         return super().form_valid(form)
+
+@login_required
+@management_or_superuser_required
+@require_POST
+def update_kpi_status(request, task_id):
+    task = get_object_or_404(KPITask, id=task_id)
+    new_status = request.POST.get('status')
+
+    if new_status in dict(KPITask._meta.get_field('status').choices):
+        task.status = new_status
+        task.graded_by = request.user
+        task.save()
+
+    base_url = reverse_lazy('kpi:management_dashboard')
+    query_string = urlencode({'staff_id': task.staff_member.id})
+    url = f"{base_url}?{query_string}"
+    return redirect(url)
