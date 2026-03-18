@@ -1,10 +1,20 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
 from accounts.decorators import management_or_superuser_required
 from .models import KPITask
+from todo.models import Task
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
+import random
+import json
+
+try:
+    from weasyprint import HTML, CSS
+except ImportError:
+    HTML = None
 
 User = get_user_model()
 
@@ -40,17 +50,25 @@ def management_dashboard(request):
         weekday = date.weekday()
 
         labels.append(date.strftime("%a, %b %d"))
+        is_wknd = weekday >= 5
+        is_weekend.append(is_wknd)
 
-        if weekday >= 5: # Saturday or Sunday
-            is_weekend.append(True)
-            # Weekends might have lower or 0 KPI if they don't work, let's say 20-50
-            data_points.append(random.randint(20, 50))
+        # Query actual KPITask data
+        # Assuming we want the average grade for tasks created on that day
+        # For a production system, this would be optimized with a GroupBy/Annotate query
+        if selected_staff:
+            daily_tasks = KPITask.objects.filter(
+                staff_member=selected_staff,
+                created_at__date=date
+            ).exclude(grade__isnull=True)
+
+            if daily_tasks.exists():
+                avg_grade = sum(t.grade for t in daily_tasks) / daily_tasks.count()
+                data_points.append(round(avg_grade, 1))
+            else:
+                data_points.append(0)
         else:
-            is_weekend.append(False)
-            # Weekdays have normal KPI, let's say 70-100
-            data_points.append(random.randint(70, 100))
-
-    import json
+            data_points.append(0)
 
     context = {
         'staff_users': staff_users,
@@ -61,3 +79,68 @@ def management_dashboard(request):
     }
 
     return render(request, 'kpi/management_dashboard.html', context)
+
+@login_required
+@management_or_superuser_required
+def download_staff_report_pdf(request, staff_id):
+    """
+    Generates a PDF report using WeasyPrint for a specific staff member.
+    Includes Task History and KPI Graph data.
+    """
+    staff_user = get_object_or_404(User, id=staff_id, role='Staff')
+
+    # 1. Fetch Task History
+    tasks = Task.objects.filter(assigned_to=staff_user).order_by('-created_at')[:50]
+
+    # 2. Generate KPI Data (same logic as dashboard for consistency)
+    today = timezone.now().date()
+    kpi_data = []
+
+    for i in range(13, -1, -1):
+        date = today - timedelta(days=i)
+        weekday = date.weekday()
+
+        is_wknd = weekday >= 5
+
+        daily_tasks = KPITask.objects.filter(
+            staff_member=staff_user,
+            created_at__date=date
+        ).exclude(grade__isnull=True)
+
+        if daily_tasks.exists():
+            avg_grade = sum(t.grade for t in daily_tasks) / daily_tasks.count()
+            value = round(avg_grade, 1)
+        else:
+            value = 0
+
+        kpi_data.append({
+            'label': date.strftime("%a, %b %d"),
+            'value': value,
+            'is_weekend': is_wknd
+        })
+
+    context = {
+        'staff_user': staff_user,
+        'tasks': tasks,
+        'kpi_data': kpi_data,
+        'now': timezone.now(),
+    }
+
+    # Render HTML template to string
+    html_string = render_to_string('kpi/pdf_report.html', context)
+
+    if HTML is None:
+        return HttpResponse("WeasyPrint is not installed or configured correctly.", status=500)
+
+    # Generate PDF
+    html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+    # Use presentational_hints=True to process basic HTML attributes like bgcolor if any
+    pdf = html.write_pdf(presentational_hints=True)
+
+    # Create HttpResponse with PDF content type
+    response = HttpResponse(pdf, content_type='application/pdf')
+    # Set Content-Disposition to force download with specific filename
+    filename = f"{staff_user.username}_Report.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    return response

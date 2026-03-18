@@ -28,11 +28,19 @@ def add_staff(request):
     if request.method == 'POST':
         form = StaffUserForm(request.POST)
         if form.is_valid():
+            import string, random
             user = form.save(commit=False)
             user.role = 'Staff'
-            user.set_password('Tradecore123!') # Default password
+
+            # Generate a secure random password for the new staff user
+            characters = string.ascii_letters + string.digits + string.punctuation
+            temp_password = ''.join(random.choice(characters) for i in range(12))
+
+            user.set_password(temp_password)
             user.save()
-            messages.success(request, f"Staff user {user.username} created successfully.")
+
+            # In a real app we would email this, but for now we display it
+            messages.success(request, f"Staff user {user.username} created successfully. Temporary password: {temp_password}")
             return redirect('accounts:settings_dashboard')
     else:
         form = StaffUserForm()
