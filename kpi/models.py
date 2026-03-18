@@ -18,7 +18,11 @@ class KPITask(models.Model):
         related_name='graded_kpis',
         limit_choices_to={'role': 'Management'}
     )
-    grade = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[('Pending', 'Pending'), ('Yes', 'Yes'), ('No', 'No')],
+        default='Pending'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

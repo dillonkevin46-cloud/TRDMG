@@ -63,10 +63,12 @@ def management_dashboard(request):
             daily_tasks = KPITask.objects.filter(
                 staff_member=selected_staff,
                 created_at__date=date
-            ).exclude(grade__isnull=True)
+            ).exclude(status='Pending')
 
             if daily_tasks.exists():
-                avg_grade = sum(t.grade for t in daily_tasks) / daily_tasks.count()
+                # 'Yes' is 100, 'No' is 0
+                total_score = sum(100 for t in daily_tasks if t.status == 'Yes')
+                avg_grade = total_score / daily_tasks.count()
                 data_points.append(round(avg_grade, 1))
             else:
                 data_points.append(0)
@@ -108,10 +110,11 @@ def download_staff_report_pdf(request, staff_id):
         daily_tasks = KPITask.objects.filter(
             staff_member=staff_user,
             created_at__date=date
-        ).exclude(grade__isnull=True)
+        ).exclude(status='Pending')
 
         if daily_tasks.exists():
-            avg_grade = sum(t.grade for t in daily_tasks) / daily_tasks.count()
+            total_score = sum(100 for t in daily_tasks if t.status == 'Yes')
+            avg_grade = total_score / daily_tasks.count()
             value = round(avg_grade, 1)
         else:
             value = 0
@@ -151,7 +154,7 @@ def download_staff_report_pdf(request, staff_id):
 class KPITaskCreateView(LoginRequiredMixin, CreateView):
     model = KPITask
     template_name = 'kpi/kpi_task_form.html'
-    fields = ['title', 'description', 'staff_member', 'grade']
+    fields = ['title', 'description', 'staff_member', 'status']
     success_url = reverse_lazy('kpi:management_dashboard')
 
     def get_form(self, form_class=None):
