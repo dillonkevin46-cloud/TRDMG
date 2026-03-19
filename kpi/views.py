@@ -1,125 +1,75 @@
-import json
-from datetime import timedelta
-
-from django.contrib.auth import get_user_model
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.decorators.http import require_POST
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from accounts.decorators import management_or_superuser_required
 from .models import KPIObjective, KPIEvaluation
 from todo.models import Task
 from django.utils import timezone
 from datetime import timedelta
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.urls import reverse_lazy
-from django.utils import timezone
 from django.views.generic import CreateView
+from django.contrib.auth import get_user_model
+import json
 
-from accounts.decorators import management_or_superuser_required
-from todo.models import Task
-
-from .models import KPITask
-
-# CRITICAL WINDOWS PATCH: Catching OSError so WeasyPrint doesn't crash the server
 try:
-    from weasyprint import CSS, HTML
+    from weasyprint import HTML, CSS
 except (ImportError, OSError):
     HTML = None
 
 User = get_user_model()
-
 
 @login_required
 @management_or_superuser_required
 def management_dashboard(request):
     """
     Management Dashboard showing KPIs for Staff members.
+    Calculates averages for a Radar/Spider chart based on KPIObjectives and KPIEvaluations.
     """
-    staff_users = User.objects.filter(role="Staff")
-    selected_staff_id = request.GET.get("staff_id")
+    staff_users = User.objects.filter(role='Staff')
+    selected_staff_id = request.GET.get('staff_id')
 
     if selected_staff_id:
-        selected_staff = User.objects.filter(id=selected_staff_id, role="Staff").first()
+        selected_staff = User.objects.filter(id=selected_staff_id, role='Staff').first()
     else:
         selected_staff = staff_users.first()
 
-    # Generate past 14 days of data
-    today = timezone.now().date()
-    labels = []
-    data_points = []
-    is_weekend = []
+    objectives = KPIObjective.objects.all()
 
-    for i in range(13, -1, -1):
-        date = today - timedelta(days=i)
-        weekday = date.weekday()
+    radar_labels = []
+    radar_data = []
 
-        labels.append(date.strftime("%a, %b %d"))
-        is_wknd = weekday >= 5
-        is_weekend.append(is_wknd)
+    for obj in objectives:
+        radar_labels.append(obj.title)
 
-        # Query actual KPIEvaluation data
         if selected_staff:
-            daily_evals = KPIEvaluation.objects.filter(
-                staff_member=selected_staff,
-                date=date
-            )
-
-            if daily_evals.exists():
-                total_score = sum(e.score_value for e in daily_evals)
-                # Max score is 10. Multiply by 10 to normalize to a 100-point scale for the chart.
-                avg_grade = (total_score / daily_evals.count()) * 10
-        # Query actual KPITask data, filtering out 'Pending' statuses
-        if selected_staff:
-            daily_tasks = KPITask.objects.filter(
-                staff_member=selected_staff, created_at__date=date, status__in=["Yes", "No"]
-            )
-
-            if daily_tasks.exists():
-                # Yes = 100, No = 0
-                total_score = sum(100 for t in daily_tasks if t.status == "Yes")
-                avg_grade = total_score / daily_tasks.count()
-                data_points.append(round(avg_grade, 1))
+            evals = KPIEvaluation.objects.filter(objective=obj, staff_member=selected_staff)
+            if evals.exists():
+                # Average the score_value (10, 7, 5, 3, 0)
+                total_score = sum(e.score_value for e in evals)
+                avg_score = total_score / evals.count()
+                radar_data.append(round(avg_score, 1))
             else:
-                data_points.append(0)
+                radar_data.append(0)
         else:
-            data_points.append(0)
+            radar_data.append(0)
 
-    staff_kpi_tasks = KPIEvaluation.objects.filter(staff_member=selected_staff).order_by('-date') if selected_staff else None
-    # Get all KPI tasks for the selected staff to display in the table
-    staff_kpi_tasks = None
+    # Fetch evaluation history for the table
+    recent_evaluations = None
     if selected_staff:
-        staff_kpi_tasks = KPITask.objects.filter(staff_member=selected_staff).order_by(
-            "-created_at"
-        )
+        recent_evaluations = KPIEvaluation.objects.filter(staff_member=selected_staff).order_by('-date', '-created_at')[:20]
 
     context = {
-        "staff_users": staff_users,
-        "selected_staff": selected_staff,
-        "labels_json": json.dumps(labels),
-        "data_points_json": json.dumps(data_points),
-        "is_weekend_json": json.dumps(is_weekend),
-        "staff_kpi_tasks": staff_kpi_tasks,
+        'staff_users': staff_users,
+        'selected_staff': selected_staff,
+        'radar_labels_json': json.dumps(radar_labels),
+        'radar_data_json': json.dumps(radar_data),
+        'recent_evaluations': recent_evaluations,
+        'objectives': objectives,
     }
 
-    return render(request, "kpi/management_dashboard.html", context)
-
-
-@login_required
-@management_or_superuser_required
-def update_kpi_status(request, task_id):
-    """
-    Updates the status of a KPITask from the dashboard table.
-    """
-    if request.method == "POST":
-        task = get_object_or_404(KPITask, id=task_id)
-        new_status = request.POST.get("status")
-        if new_status in ["Yes", "No", "Pending"]:
-            task.status = new_status
-            task.save()
-        return redirect(f"/kpi/dashboard/?staff_id={task.staff_member.id}")
-    return redirect("kpi:management_dashboard")
+    return render(request, 'kpi/management_dashboard.html', context)
 
 
 @login_required
@@ -127,117 +77,96 @@ def update_kpi_status(request, task_id):
 def download_staff_report_pdf(request, staff_id):
     """
     Generates a PDF report using WeasyPrint for a specific staff member.
+    Includes Task History and KPI Graph data (Evaluations).
     """
-    staff_user = get_object_or_404(User, id=staff_id, role="Staff")
+    staff_user = get_object_or_404(User, id=staff_id, role='Staff')
 
     # 1. Fetch Task History
-    tasks = Task.objects.filter(assigned_to=staff_user).order_by("-created_at")[:50]
+    tasks = Task.objects.filter(assigned_to=staff_user).order_by('-created_at')[:50]
 
-    # 2. Generate KPI Data
-    today = timezone.now().date()
-    kpi_data = []
+    # 2. Fetch KPI Evaluations
+    evaluations = KPIEvaluation.objects.filter(staff_member=staff_user).order_by('-date', '-created_at')[:50]
 
-    for i in range(13, -1, -1):
-        date = today - timedelta(days=i)
-        weekday = date.weekday()
-        is_wknd = weekday >= 5
+    # Calculate objective averages for the PDF summary
+    objectives = KPIObjective.objects.all()
+    objective_summaries = []
 
-        daily_evals = KPIEvaluation.objects.filter(
-            staff_member=staff_user,
-            date=date
-        )
-
-        if daily_evals.exists():
-            total_score = sum(e.score_value for e in daily_evals)
-            avg_grade = (total_score / daily_evals.count()) * 10
-        daily_tasks = KPITask.objects.filter(
-            staff_member=staff_user, created_at__date=date, status__in=["Yes", "No"]
-        )
-
-        if daily_tasks.exists():
-            total_score = sum(100 for t in daily_tasks if t.status == "Yes")
-            avg_grade = total_score / daily_tasks.count()
-            value = round(avg_grade, 1)
+    for obj in objectives:
+        obj_evals = KPIEvaluation.objects.filter(objective=obj, staff_member=staff_user)
+        if obj_evals.exists():
+            avg_score = sum(e.score_value for e in obj_evals) / obj_evals.count()
+            # Normalize to 100 for the CSS bar chart in the PDF (Max score is 10)
+            percentage = min(avg_score * 10, 100)
+            objective_summaries.append({
+                'label': obj.title,
+                'value': round(percentage, 1),
+                'is_weekend': False # Reuse existing template logic, or update template
+            })
         else:
-            value = 0
-
-        kpi_data.append(
-            {
-                "label": date.strftime("%a, %b %d"),
-                "value": value,
-                "is_weekend": is_wknd,
-            }
-        )
+            objective_summaries.append({
+                'label': obj.title,
+                'value': 0,
+                'is_weekend': False
+            })
 
     context = {
-        "staff_user": staff_user,
-        "tasks": tasks,
-        "kpi_data": kpi_data,
-        "now": timezone.now(),
+        'staff_user': staff_user,
+        'tasks': tasks,
+        'evaluations': evaluations,
+        'kpi_data': objective_summaries, # Reuse existing variable name for the PDF template chart
+        'now': timezone.now(),
     }
 
     # Render HTML template to string
-    html_string = render_to_string("kpi/pdf_report.html", context)
+    html_string = render_to_string('kpi/pdf_report.html', context)
 
     if HTML is None:
-        return HttpResponse(
-            "WeasyPrint is not installed or configured correctly.", status=500
-        )
+        return HttpResponse("WeasyPrint is not installed or configured correctly on this system.", status=500)
 
     # Generate PDF
-    html = HTML(string=html_string, base_url=request.build_absolute_uri("/"))
+    html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+    # Use presentational_hints=True to process basic HTML attributes like bgcolor if any
     pdf = html.write_pdf(presentational_hints=True)
 
     # Create HttpResponse with PDF content type
-    response = HttpResponse(pdf, content_type="application/pdf")
+    response = HttpResponse(pdf, content_type='application/pdf')
+    # Set Content-Disposition to force download with specific filename
     filename = f"{staff_user.username}_Report.pdf"
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     return response
 
-class KPIObjectiveCreateView(LoginRequiredMixin, CreateView):
+
+class KPIObjectiveCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = KPIObjective
     template_name = 'kpi/kpi_task_form.html'
     from .forms import KPIObjectiveForm
     form_class = KPIObjectiveForm
     success_url = reverse_lazy('kpi:management_dashboard')
 
+    def test_func(self):
+        return self.request.user.role == 'Management' or self.request.user.is_superuser
+
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         return super().form_valid(form)
 
-class KPIEvaluationCreateView(LoginRequiredMixin, CreateView):
+
+class KPIEvaluationCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = KPIEvaluation
     template_name = 'kpi/kpi_task_form.html'
     from .forms import KPIEvaluationForm
     form_class = KPIEvaluationForm
     success_url = reverse_lazy('kpi:management_dashboard')
 
-class KPITaskCreateView(LoginRequiredMixin, CreateView):
-    model = KPITask
-    template_name = "kpi/kpi_task_form.html"
-    fields = ["title", "description", "staff_member", "status"]
-
-    def get_success_url(self):
-        # Redirect directly to the specific staff member's dashboard tab
-        return f"/kpi/dashboard/?staff_id={self.object.staff_member.id}"
+    def test_func(self):
+        return self.request.user.role == 'Management' or self.request.user.is_superuser
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["staff_member"].queryset = User.objects.filter(role="Staff")
+        form.fields['staff_member'].queryset = User.objects.filter(role='Staff')
         return form
 
     def form_valid(self, form):
         form.instance.evaluated_by = self.request.user
-        return super().form_valid(form)
-
-@login_required
-@management_or_superuser_required
-@require_POST
-def update_kpi_status(request, task_id):
-    # This was for the old KPITask model.
-    # KPI evaluations are now added as separate models, not updated via status buttons.
-    # We will leave this as a dummy redirect if it's hit, or the user can remove the buttons in a later phase.
-    return redirect('kpi:management_dashboard')
-        form.instance.graded_by = self.request.user
         return super().form_valid(form)

@@ -24,9 +24,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("todo/", include("todo.urls")),
     path("accounts/", include("accounts.urls")),
-    
-    # CRITICAL FIX: Must be accounts/ so Django can find the login template!
-    path("accounts/", include("django.contrib.auth.urls")), 
-    
     path("kpi/", include("kpi.urls")),
+    path("auth/", include("django.contrib.auth.urls")),
 ]
