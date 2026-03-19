@@ -18,18 +18,14 @@ class BaseTaskListView(LoginRequiredMixin, ListView):
         user = self.request.user
         qs = super().get_queryset()
 
-        # Role-based visibility
         if user.role == 'Staff':
             qs = qs.filter(assigned_to=user)
         elif user.role == 'Management':
-            # Management sees tasks created by them, or tasks assigned to staff they manage.
             qs = qs.filter(Q(created_by=user) | Q(assigned_to__manager=user))
         else:
-            # For Viewer/Superuser, show none or all depending on specs (Assuming empty for unauthorized roles)
             if user.is_superuser:
                 return qs
             return qs.none()
-
         return qs
 
 class DailyTaskListView(BaseTaskListView):
@@ -37,8 +33,8 @@ class DailyTaskListView(BaseTaskListView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-
         date_str = self.request.GET.get('date')
+        
         if date_str:
             try:
                 from datetime import datetime
@@ -48,11 +44,12 @@ class DailyTaskListView(BaseTaskListView):
         else:
             selected_date = timezone.now().date()
 
-        return qs.filter(updated_at__date=selected_date)
+        # CRITICAL FIX: Filter by the scheduled due_date. If there is no due date, fallback to when it was created.
+        return qs.filter(Q(due_date__date=selected_date) | Q(due_date__isnull=True, created_at__date=selected_date)).order_by('due_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
+        
         date_str = self.request.GET.get('date')
         if date_str:
             try:
@@ -65,7 +62,6 @@ class DailyTaskListView(BaseTaskListView):
 
         context['selected_date'] = selected_date
 
-        # Split the context data into active and completed
         tasks = context['tasks']
         context['active_tasks'] = tasks.exclude(status='Completed')
         context['completed_tasks'] = tasks.filter(status='Completed')
@@ -80,7 +76,11 @@ class WeeklyTaskListView(BaseTaskListView):
         today = timezone.now().date()
         start_of_week = today - timedelta(days=today.weekday())
         end_of_week = start_of_week + timedelta(days=6)
-        return qs.filter(updated_at__date__gte=start_of_week, updated_at__date__lte=end_of_week)
+        
+        return qs.filter(
+            Q(due_date__date__gte=start_of_week, due_date__date__lte=end_of_week) | 
+            Q(due_date__isnull=True, created_at__date__gte=start_of_week, created_at__date__lte=end_of_week)
+        ).order_by('due_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -95,7 +95,10 @@ class MonthlyTaskListView(BaseTaskListView):
     def get_queryset(self):
         qs = super().get_queryset()
         today = timezone.now().date()
-        return qs.filter(updated_at__year=today.year, updated_at__month=today.month)
+        return qs.filter(
+            Q(due_date__year=today.year, due_date__month=today.month) | 
+            Q(due_date__isnull=True, created_at__year=today.year, created_at__month=today.month)
+        ).order_by('due_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -114,7 +117,6 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         user = self.request.user
         qs = super().get_queryset()
 
-        # Role-based visibility
         if user.role == 'Staff':
             qs = qs.filter(assigned_to=user)
         elif user.role == 'Management':
@@ -123,7 +125,6 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
             if user.is_superuser:
                 return qs
             return qs.none()
-
         return qs
 
     def form_valid(self, form):
