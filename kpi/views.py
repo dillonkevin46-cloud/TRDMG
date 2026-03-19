@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.decorators.http import require_POST
 from accounts.decorators import management_or_superuser_required
-from .models import KPITask
+from .models import KPIObjective, KPIEvaluation
 from todo.models import Task
 from django.utils import timezone
 from datetime import timedelta
@@ -58,26 +58,24 @@ def management_dashboard(request):
         is_wknd = weekday >= 5
         is_weekend.append(is_wknd)
 
-        # Query actual KPITask data
-        # Assuming we want the average grade for tasks created on that day
-        # For a production system, this would be optimized with a GroupBy/Annotate query
+        # Query actual KPIEvaluation data
         if selected_staff:
-            daily_tasks = KPITask.objects.filter(
+            daily_evals = KPIEvaluation.objects.filter(
                 staff_member=selected_staff,
-                created_at__date=date
-            ).exclude(status='Pending')
+                date=date
+            )
 
-            if daily_tasks.exists():
-                # 'Yes' is 100, 'No' is 0
-                total_score = sum(100 for t in daily_tasks if t.status == 'Yes')
-                avg_grade = total_score / daily_tasks.count()
+            if daily_evals.exists():
+                total_score = sum(e.score_value for e in daily_evals)
+                # Max score is 10. Multiply by 10 to normalize to a 100-point scale for the chart.
+                avg_grade = (total_score / daily_evals.count()) * 10
                 data_points.append(round(avg_grade, 1))
             else:
                 data_points.append(0)
         else:
             data_points.append(0)
 
-    staff_kpi_tasks = KPITask.objects.filter(staff_member=selected_staff).order_by('-created_at') if selected_staff else None
+    staff_kpi_tasks = KPIEvaluation.objects.filter(staff_member=selected_staff).order_by('-date') if selected_staff else None
 
     context = {
         'staff_users': staff_users,
@@ -112,14 +110,14 @@ def download_staff_report_pdf(request, staff_id):
 
         is_wknd = weekday >= 5
 
-        daily_tasks = KPITask.objects.filter(
+        daily_evals = KPIEvaluation.objects.filter(
             staff_member=staff_user,
-            created_at__date=date
-        ).exclude(status='Pending')
+            date=date
+        )
 
-        if daily_tasks.exists():
-            total_score = sum(100 for t in daily_tasks if t.status == 'Yes')
-            avg_grade = total_score / daily_tasks.count()
+        if daily_evals.exists():
+            total_score = sum(e.score_value for e in daily_evals)
+            avg_grade = (total_score / daily_evals.count()) * 10
             value = round(avg_grade, 1)
         else:
             value = 0
@@ -156,10 +154,22 @@ def download_staff_report_pdf(request, staff_id):
 
     return response
 
-class KPITaskCreateView(LoginRequiredMixin, CreateView):
-    model = KPITask
+class KPIObjectiveCreateView(LoginRequiredMixin, CreateView):
+    model = KPIObjective
     template_name = 'kpi/kpi_task_form.html'
-    fields = ['title', 'description', 'staff_member', 'status']
+    from .forms import KPIObjectiveForm
+    form_class = KPIObjectiveForm
+    success_url = reverse_lazy('kpi:management_dashboard')
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+
+class KPIEvaluationCreateView(LoginRequiredMixin, CreateView):
+    model = KPIEvaluation
+    template_name = 'kpi/kpi_task_form.html'
+    from .forms import KPIEvaluationForm
+    form_class = KPIEvaluationForm
     success_url = reverse_lazy('kpi:management_dashboard')
 
     def get_form(self, form_class=None):
@@ -168,22 +178,14 @@ class KPITaskCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        form.instance.graded_by = self.request.user
+        form.instance.evaluated_by = self.request.user
         return super().form_valid(form)
 
 @login_required
 @management_or_superuser_required
 @require_POST
 def update_kpi_status(request, task_id):
-    task = get_object_or_404(KPITask, id=task_id)
-    new_status = request.POST.get('status')
-
-    if new_status in dict(KPITask._meta.get_field('status').choices):
-        task.status = new_status
-        task.graded_by = request.user
-        task.save()
-
-    base_url = reverse_lazy('kpi:management_dashboard')
-    query_string = urlencode({'staff_id': task.staff_member.id})
-    url = f"{base_url}?{query_string}"
-    return redirect(url)
+    # This was for the old KPITask model.
+    # KPI evaluations are now added as separate models, not updated via status buttons.
+    # We will leave this as a dummy redirect if it's hit, or the user can remove the buttons in a later phase.
+    return redirect('kpi:management_dashboard')
