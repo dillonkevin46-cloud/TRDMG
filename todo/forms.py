@@ -1,7 +1,13 @@
 from django import forms
-from .models import Task, Comment
+from .models import Task, Comment, TaskAttachment
 
 class TaskForm(forms.ModelForm):
+    attachment = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100'
+        })
+    )
     comment_text = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={
@@ -54,11 +60,14 @@ class TaskForm(forms.ModelForm):
     def save(self, commit=True, user=None):
         task = super().save(commit=False)
         comment_text = self.cleaned_data.get('comment_text')
+        attachment_file = self.cleaned_data.get('attachment')
 
         if commit:
             task.save()
             if comment_text and user:
                 Comment.objects.create(task=task, user=user, text=comment_text)
+            if attachment_file and user:
+                TaskAttachment.objects.create(task=task, file=attachment_file, uploaded_by=user)
 
         return task
 
