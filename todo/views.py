@@ -36,15 +36,21 @@ class BaseTaskListView(LoginRequiredMixin, ListView):
             else:
                 qs = qs.none()
 
-        search_query = self.request.GET.get('search')
-        if search_query:
-            qs = qs.filter(Q(title__icontains=search_query) | Q(description__icontains=search_query))
+        search = self.request.GET.get('search')
+        status_filter = self.request.GET.get('status')
+
+        if search:
+            qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
+
+        if status_filter and status_filter != 'All':
+            qs = qs.filter(status=status_filter)
 
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['search_query'] = self.request.GET.get('search', '')
+        context['search'] = self.request.GET.get('search', '')
+        context['status_filter'] = self.request.GET.get('status', 'All')
         return context
 
 class DailyTaskListView(BaseTaskListView):
@@ -172,10 +178,22 @@ class TaskBoardView(LoginRequiredMixin, TemplateView):
             if not user.is_superuser:
                 qs = qs.none()
 
+        search = self.request.GET.get('search')
+        status_filter = self.request.GET.get('status')
+
+        if search:
+            qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
+
+        if status_filter and status_filter != 'All':
+            qs = qs.filter(status=status_filter)
+
         context['not_started_tasks'] = qs.filter(status='Not Started').order_by('due_date')
         context['started_tasks'] = qs.filter(status='Started').order_by('due_date')
         context['stuck_tasks'] = qs.filter(status='Stuck').order_by('due_date')
         context['completed_tasks'] = qs.filter(status='Completed').order_by('-completed_at')
+
+        context['search'] = search if search else ''
+        context['status_filter'] = status_filter if status_filter else 'All'
 
         return context
 
