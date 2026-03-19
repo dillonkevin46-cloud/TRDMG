@@ -16,4 +16,7 @@ urlpatterns = [
     path('settings/department/add/', views.add_department, name='add_department'),
     path('settings/department/<int:dept_id>/edit/', views.edit_department, name='edit_department'),
     path('settings/department/<int:dept_id>/remove/', views.remove_department, name='remove_department'),
+
+    # Notifications
+    path('notifications/read/', views.mark_notifications_read, name='mark_notifications_read'),
 ]

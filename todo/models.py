@@ -72,24 +72,41 @@ class Task(models.Model):
             pass
 
     def save(self, *args, **kwargs):
-        # Time tracking logic based on status changes
-        if self.pk:
-            orig = Task.objects.get(pk=self.pk)
-            # If changing to Started from something else
-            if self.status == 'Started' and orig.status != 'Started':
-                if not self.started_at:
-                    self.started_at = timezone.now()
-            # If changing to Completed from something else
-            elif self.status == 'Completed' and orig.status != 'Completed':
+        is_new = self.pk is None
+        old_status = None
+
+        if not is_new:
+            old_task = Task.objects.get(pk=self.pk)
+            old_status = old_task.status
+
+            if self.status == 'Started' and old_status != 'Started' and not self.started_at:
+                self.started_at = timezone.now()
+            elif self.status == 'Completed' and old_status != 'Completed':
                 self.completed_at = timezone.now()
         else:
-            # New object creation
             if self.status == 'Started':
                 self.started_at = timezone.now()
             elif self.status == 'Completed':
                 self.completed_at = timezone.now()
 
         super().save(*args, **kwargs)
+
+        from accounts.models import Notification
+        from django.urls import reverse
+
+        link = f"/todo/{self.pk}/update/"
+
+        if is_new:
+            Notification.objects.create(
+                recipient=self.assigned_to,
+                message=f"New task assigned: {self.title}",
+                link=link
+            )
+        elif old_status and old_status != self.status:
+            msg = f"Task '{self.title}' status updated to {self.status}"
+            Notification.objects.create(recipient=self.created_by, message=msg, link=link)
+            if self.created_by != self.assigned_to:
+                Notification.objects.create(recipient=self.assigned_to, message=msg, link=link)
 
     def __str__(self):
         return self.title
@@ -99,6 +116,20 @@ class Comment(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        if is_new:
+            from accounts.models import Notification
+            link = f"/todo/{self.task.pk}/update/"
+            msg = f"New comment on '{self.task.title}'"
+
+            if self.user != self.task.assigned_to:
+                Notification.objects.create(recipient=self.task.assigned_to, message=msg, link=link)
+            if self.user != self.task.created_by and self.task.assigned_to != self.task.created_by:
+                Notification.objects.create(recipient=self.task.created_by, message=msg, link=link)
 
     def __str__(self):
         return f"Comment by {self.user.username} on {self.task.title}"

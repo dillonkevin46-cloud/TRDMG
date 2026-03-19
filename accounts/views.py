@@ -125,3 +125,9 @@ def remove_department(request, dept_id):
         messages.success(request, "Department deleted.")
         return redirect('accounts:settings_dashboard')
     return render(request, 'accounts/confirm_delete.html', {'object': department})
+
+@login_required
+def mark_notifications_read(request):
+    from .models import Notification
+    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    return redirect(request.META.get('HTTP_REFERER', '/'))
