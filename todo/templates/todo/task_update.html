@@ -18,7 +18,7 @@
     </div>
 
     <div class="px-6 py-6">
-        <form method="post" class="space-y-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
 
             {% if form.non_field_errors %}
@@ -53,6 +53,14 @@
                 {% endif %}
             </div>
 
+            <div>
+                <label for="{{ form.attachment.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">Upload Attachment</label>
+                {{ form.attachment }}
+                {% if form.attachment.errors %}
+                    <p class="mt-2 text-sm text-red-600 font-medium">{{ form.attachment.errors.0 }}</p>
+                {% endif %}
+            </div>
+
             <div class="flex items-center gap-3 pt-4 border-t border-slate-100">
                 <button type="submit" class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                     Update Status
@@ -62,6 +70,33 @@
                 </a>
             </div>
         </form>
+
+        <!-- Attachments Section -->
+        {% if task.attachments.all %}
+        <div class="mt-8 pt-6 border-t border-slate-200">
+            <h4 class="text-sm font-medium text-slate-900 mb-4">File Attachments</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% for attachment in task.attachments.all %}
+                <div class="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-slate-50">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <svg class="w-8 h-8 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div class="truncate">
+                            <p class="text-sm font-medium text-slate-700 truncate" title="{{ attachment.file.name }}">{{ attachment.file.name }}</p>
+                            <p class="text-xs text-slate-500">by {{ attachment.uploaded_by.username }}</p>
+                        </div>
+                    </div>
+                    <a href="{{ attachment.file.url }}" download class="p-2 text-indigo-600 hover:bg-indigo-100 rounded-md transition-colors" title="Download">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Existing Comments -->
         {% if task.comments.all %}

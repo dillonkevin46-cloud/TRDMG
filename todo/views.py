@@ -27,10 +27,20 @@ class BaseTaskListView(LoginRequiredMixin, ListView):
         else:
             # For Viewer/Superuser, show none or all depending on specs (Assuming empty for unauthorized roles)
             if user.is_superuser:
-                return qs
-            return qs.none()
+                pass
+            else:
+                qs = qs.none()
+
+        search_query = self.request.GET.get('search')
+        if search_query:
+            qs = qs.filter(Q(title__icontains=search_query) | Q(description__icontains=search_query))
 
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('search', '')
+        return context
 
 class DailyTaskListView(BaseTaskListView):
     template_name = 'todo/task_list_daily.html'
