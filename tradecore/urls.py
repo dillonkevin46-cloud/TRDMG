@@ -16,6 +16,4 @@ urlpatterns = [
     path("accounts/", include("django.contrib.auth.urls")), 
     
     path("kpi/", include("kpi.urls")),
-    path("accounts/", include("django.contrib.auth.urls")),
-]
 ]
