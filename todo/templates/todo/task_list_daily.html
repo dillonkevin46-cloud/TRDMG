@@ -66,6 +66,7 @@
             <a href="{% url 'todo:task-list-daily' %}" class="px-3 py-1.5 text-sm font-medium rounded-md {% if 'daily' in request.path %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Daily</a>
             <a href="{% url 'todo:task-list-weekly' %}" class="px-3 py-1.5 text-sm font-medium rounded-md {% if 'weekly' in request.path %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Weekly</a>
             <a href="{% url 'todo:task-list-monthly' %}" class="px-3 py-1.5 text-sm font-medium rounded-md {% if 'monthly' in request.path %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Monthly</a>
+            <a href="{% url 'todo:task-board' %}" class="px-3 py-1.5 text-sm font-medium rounded-md {% if 'board' in request.path %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Board View</a>
         </div>
     </div>
 
