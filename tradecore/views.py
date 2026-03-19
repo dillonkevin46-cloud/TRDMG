@@ -1,38 +1,40 @@
-import json
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from todo.models import Task
+import json
 
 @login_required
 def index(request):
     user = request.user
     context = {}
 
-    if user.role in ['Management', 'Superuser']:
+    if user.role in ['Management', 'Superuser'] or user.is_superuser:
         if user.is_superuser:
             tasks = Task.objects.all()
+            tasks_due_today = Task.objects.filter(due_date__date=timezone.now().date()).exclude(status='Completed')
         else:
             tasks = Task.objects.filter(created_by=user)
+            tasks_due_today = Task.objects.filter(created_by=user, due_date__date=timezone.now().date()).exclude(status='Completed')
 
         total_tasks = tasks.count()
-        completed_tasks = tasks.filter(status='Completed').count()
-        stuck_tasks = tasks.filter(status='Stuck').count()
+
+        # Calculate counts for the 4 statuses
         not_started = tasks.filter(status='Not Started').count()
         started = tasks.filter(status='Started').count()
+        completed = tasks.filter(status='Completed').count()
+        stuck = tasks.filter(status='Stuck').count()
 
         status_labels = ['Not Started', 'Started', 'Completed', 'Stuck']
-        status_counts = [not_started, started, completed_tasks, stuck_tasks]
+        status_counts = [not_started, started, completed, stuck]
 
-        context['total_tasks'] = total_tasks
-        context['completed_tasks'] = completed_tasks
-        context['stuck_tasks'] = stuck_tasks
-        context['status_labels_json'] = json.dumps(status_labels)
-        context['status_counts_json'] = json.dumps(status_counts)
+        context = {
+            'total_tasks': total_tasks,
+            'completed_tasks': completed,
+            'stuck_tasks': stuck,
+            'status_labels_json': json.dumps(status_labels),
+            'status_counts_json': json.dumps(status_counts),
+            'tasks_due_today': tasks_due_today,
+        }
 
-        # CRITICAL FIX: Find tasks scheduled for today (or earlier) that are not completed
-        context['tasks_due_today'] = tasks.filter(
-            due_date__date__lte=timezone.now().date()
-        ).exclude(status='Completed').order_by('due_date')
-
-    return render(request, "dashboard.html", context)
+    return render(request, 'dashboard.html', context)

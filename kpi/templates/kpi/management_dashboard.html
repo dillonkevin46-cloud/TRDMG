@@ -60,11 +60,17 @@
                     Download PDF Report
                 </a>
                 {% endif %}
-                <a href="{% url 'kpi:task-create' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                <a href="{% url 'kpi:objective_create' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    Add KPI Task
+                    Add Objective
+                </a>
+                <a href="{% url 'kpi:evaluation_create' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Evaluation
                 </a>
             </div>
         </div>
@@ -85,26 +91,26 @@
     </div>
 </div>
 
-<!-- Assigned KPI Tasks Table -->
+<!-- Recent KPI Evaluations Table -->
 {% if selected_staff %}
 <div class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
     <div class="p-6 border-b border-slate-100">
-        <h3 class="text-lg font-bold text-slate-800">Assigned KPI Tasks</h3>
-        <p class="text-sm text-slate-500 mt-1">Review and grade tasks for {{ selected_staff.username }}</p>
+        <h3 class="text-lg font-bold text-slate-800">Recent KPI Evaluations</h3>
+        <p class="text-sm text-slate-500 mt-1">Review evaluations for {{ selected_staff.username }}</p>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full text-left text-sm whitespace-nowrap">
             <thead class="uppercase tracking-wider border-b border-slate-200 bg-slate-50 text-slate-500">
                 <tr>
                     <th scope="col" class="px-6 py-3 font-medium">Date</th>
-                    <th scope="col" class="px-6 py-3 font-medium">Task Title</th>
+                    <th scope="col" class="px-6 py-3 font-medium">Objective Title</th>
                     <th scope="col" class="px-6 py-3 font-medium">Description</th>
-                    <th scope="col" class="px-6 py-3 font-medium text-center">Current Status</th>
-                    <th scope="col" class="px-6 py-3 font-medium text-center">Action</th>
+                    <th scope="col" class="px-6 py-3 font-medium text-center">Score</th>
+                    <th scope="col" class="px-6 py-3 font-medium text-center">Evaluator</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 bg-white">
-                {% for eval in staff_kpi_tasks %}
+                {% for eval in recent_evaluations %}
                 <tr class="hover:bg-slate-50/50 transition-colors">
                     <td class="px-6 py-4 text-slate-500">{{ eval.date|date:"M d, Y" }}</td>
                     <td class="px-6 py-4 font-medium text-slate-900">{{ eval.objective.title }}</td>
@@ -118,17 +124,14 @@
                             {{ eval.score }}
                         </span>
                     </td>
-                    <td class="px-6 py-4">
-                        <div class="flex justify-center gap-2">
-                            <!-- Update actions will be added in a later phase -->
-                            <span class="text-xs text-slate-400 italic">Static View</span>
-                        </div>
+                    <td class="px-6 py-4 text-center text-slate-500">
+                        {{ eval.evaluated_by.username }}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
                     <td colspan="5" class="px-6 py-8 text-center text-slate-500">
-                        No KPI tasks found for this staff member.
+                        No KPI evaluations found for this staff member.
                     </td>
                 </tr>
                 {% endfor %}
@@ -147,35 +150,24 @@
         const ctx = document.getElementById('kpiChart').getContext('2d');
 
         // Data injected from Django view
-        const rawLabels = JSON.parse('{{ labels_json|escapejs }}');
-        const rawData = JSON.parse('{{ data_points_json|escapejs }}');
-        const rawIsWeekend = JSON.parse('{{ is_weekend_json|escapejs }}');
-
-        // Map colors based on weekend vs weekday
-        // Weekdays: Indigo/Blue
-        // Weekends: Gray
-        const backgroundColors = rawIsWeekend.map(isWknd =>
-            isWknd ? 'rgba(203, 213, 225, 0.8)' : 'rgba(99, 102, 241, 0.85)'
-        );
-
-        const borderColors = rawIsWeekend.map(isWknd =>
-            isWknd ? 'rgba(148, 163, 184, 1)' : 'rgba(79, 70, 229, 1)'
-        );
+        const rawLabels = JSON.parse('{{ radar_labels_json|escapejs }}');
+        const rawData = JSON.parse('{{ radar_data_json|escapejs }}');
 
         // Chart.js Configuration
         const kpiChart = new Chart(ctx, {
-            type: 'bar',
+            type: 'radar',
             data: {
                 labels: rawLabels,
                 datasets: [{
-                    label: 'KPI Score',
+                    label: 'Average Score',
                     data: rawData,
-                    backgroundColor: backgroundColors,
-                    borderColor: borderColors,
-                    borderWidth: 1,
-                    borderRadius: 6, // Rounded bar corners (Monday.com style)
-                    borderSkipped: false,
-                    barPercentage: 0.6
+                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(99, 102, 241, 1)',
+                    borderWidth: 2,
                 }]
             },
             options: {
@@ -183,7 +175,7 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false // We built a custom legend in HTML above
+                        display: false
                     },
                     tooltip: {
                         backgroundColor: 'rgba(15, 23, 42, 0.9)',
@@ -200,36 +192,25 @@
                     }
                 },
                 scales: {
-                    y: {
+                    r: {
                         beginAtZero: true,
-                        max: 100, // Assuming KPI is 0-100
-                        grid: {
-                            color: 'rgba(241, 245, 249, 1)',
-                            drawBorder: false,
-                        },
+                        max: 10,
                         ticks: {
-                            font: { family: "'Inter', sans-serif", size: 12 },
-                            color: '#64748b',
-                            padding: 10
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false,
-                            drawBorder: false,
+                            stepSize: 2,
+                            backdropColor: 'transparent',
+                            font: { family: "'Inter', sans-serif", size: 10 },
+                            color: '#94a3b8'
                         },
-                        ticks: {
-                            font: { family: "'Inter', sans-serif", size: 12 },
-                            color: '#64748b',
-                            maxRotation: 45,
-                            minRotation: 45
+                        grid: {
+                            color: 'rgba(241, 245, 249, 1)'
+                        },
+                        angleLines: {
+                            color: 'rgba(226, 232, 240, 1)'
+                        },
+                        pointLabels: {
+                            font: { family: "'Inter', sans-serif", size: 12, weight: '600' },
+                            color: '#475569'
                         }
-                    }
-                },
-                animation: {
-                    y: {
-                        duration: 1000,
-                        easing: 'easeOutQuart'
                     }
                 }
             }
