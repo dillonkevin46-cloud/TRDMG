@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from django.core.exceptions import ValidationError
+from datetime import timedelta
 
 class Task(models.Model):
     STATUS_CHOICES = [
@@ -27,18 +27,48 @@ class Task(models.Model):
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Not Started')
 
+    due_date = models.DateTimeField(null=True, blank=True)
+
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def is_overdue(self):
+        if self.due_date and self.status != 'Completed':
+            return timezone.now() > self.due_date
+        return False
+
+    @property
+    def is_due_soon(self):
+        if self.due_date and self.status != 'Completed':
+            now = timezone.now()
+            return now <= self.due_date <= now + timedelta(hours=24)
+        return False
+
+    @property
+    def time_taken(self):
+        if self.completed_at and self.started_at:
+            delta = self.completed_at - self.started_at
+            days = delta.days
+            hours, remainder = divmod(delta.seconds, 3600)
+            minutes, _ = divmod(remainder, 60)
+
+            parts = []
+            if days > 0:
+                parts.append(f"{days} day{'s' if days != 1 else ''}")
+            if hours > 0:
+                parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
+            if minutes > 0 or (days == 0 and hours == 0):
+                parts.append(f"{minutes} min{'s' if minutes != 1 else ''}")
+
+            return ", ".join(parts)
+        return "N/A"
+
     def clean(self):
         super().clean()
         if self.status == 'Stuck':
-            # Check if there are any comments when saving
-            # This validation is better suited for a Form as comments are related objects
-            # but providing a hook here for completeness if needed.
-            # We'll rely on the Form to enforce this business logic fully before saving.
             pass
 
     def save(self, *args, **kwargs):

@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.urls import reverse_lazy
 from django.db.models import Q
 from .models import Task
-from .forms import TaskStatusUpdateForm
+from .forms import TaskForm
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -64,6 +64,12 @@ class DailyTaskListView(BaseTaskListView):
             selected_date = timezone.now().date()
 
         context['selected_date'] = selected_date
+
+        # Split the context data into active and completed
+        tasks = context['tasks']
+        context['active_tasks'] = tasks.exclude(status='Completed')
+        context['completed_tasks'] = tasks.filter(status='Completed')
+
         return context
 
 class WeeklyTaskListView(BaseTaskListView):
@@ -76,6 +82,13 @@ class WeeklyTaskListView(BaseTaskListView):
         end_of_week = start_of_week + timedelta(days=6)
         return qs.filter(updated_at__date__gte=start_of_week, updated_at__date__lte=end_of_week)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tasks = context['tasks']
+        context['active_tasks'] = tasks.exclude(status='Completed')
+        context['completed_tasks'] = tasks.filter(status='Completed')
+        return context
+
 class MonthlyTaskListView(BaseTaskListView):
     template_name = 'todo/task_list_monthly.html'
 
@@ -84,11 +97,18 @@ class MonthlyTaskListView(BaseTaskListView):
         today = timezone.now().date()
         return qs.filter(updated_at__year=today.year, updated_at__month=today.month)
 
-class TaskStatusUpdateView(LoginRequiredMixin, UpdateView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tasks = context['tasks']
+        context['active_tasks'] = tasks.exclude(status='Completed')
+        context['completed_tasks'] = tasks.filter(status='Completed')
+        return context
+
+class TaskUpdateView(LoginRequiredMixin, UpdateView):
     model = Task
-    form_class = TaskStatusUpdateForm
+    form_class = TaskForm
     template_name = 'todo/task_update.html'
-    success_url = reverse_lazy('todo:task-list-daily') # Redirect back to daily view
+    success_url = reverse_lazy('todo:task-list-daily')
 
     def get_queryset(self):
         user = self.request.user
@@ -107,7 +127,6 @@ class TaskStatusUpdateView(LoginRequiredMixin, UpdateView):
         return qs
 
     def form_valid(self, form):
-        # Override save to pass the user to the form so comment can have the author
         self.object = form.save(user=self.request.user)
         from django.http import HttpResponseRedirect
         return HttpResponseRedirect(self.get_success_url())
@@ -115,7 +134,7 @@ class TaskStatusUpdateView(LoginRequiredMixin, UpdateView):
 class TaskCreateView(LoginRequiredMixin, CreateView):
     model = Task
     template_name = 'todo/task_form.html'
-    fields = ['title', 'description', 'status', 'assigned_to']
+    form_class = TaskForm
     success_url = reverse_lazy('todo:task-list-daily')
 
     def get_form(self, form_class=None):
@@ -125,4 +144,6 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
-        return super().form_valid(form)
+        self.object = form.save(user=self.request.user)
+        from django.http import HttpResponseRedirect
+        return HttpResponseRedirect(self.get_success_url())
