@@ -135,6 +135,22 @@
             </div>
             <div class="flex items-center gap-3">
                 {% if user.is_authenticated %}
+
+                <!-- Mobile Notification Bell -->
+                <div class="relative">
+                    <button id="mobileNotificationBtn" onclick="toggleDropdown()" class="p-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors relative" title="Notifications">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        {% if unread_notifications.count > 0 %}
+                        <span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] font-bold text-white items-center justify-center">{{ unread_notifications.count }}</span>
+                        </span>
+                        {% endif %}
+                    </button>
+                </div>
+
                 <form action="{% url 'logout' %}" method="post" class="flex items-center">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{% url 'login' %}">
@@ -154,9 +170,57 @@
         </header>
 
         <!-- Top Navigation Area / Breadcrumbs -->
-        <div class="h-14 flex items-center px-8 border-b border-slate-100 hidden md:flex">
+        <div class="h-14 flex items-center justify-between px-8 border-b border-slate-100 hidden md:flex">
             <h1 class="text-xl font-semibold text-slate-800">{% block header_title %}Overview{% endblock %}</h1>
+
+            {% if user.is_authenticated %}
+            <div class="flex items-center gap-4">
+                <!-- Desktop Notification Bell -->
+                <div class="relative">
+                    <button id="desktopNotificationBtn" onclick="toggleDropdown()" class="p-1.5 text-slate-400 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 rounded-md transition-colors relative" title="Notifications">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        {% if unread_notifications.count > 0 %}
+                        <span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] font-bold text-white items-center justify-center">{{ unread_notifications.count }}</span>
+                        </span>
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+            {% endif %}
         </div>
+
+        <!-- Global Notification Dropdown (Positioned outside hidden containers) -->
+        {% if user.is_authenticated %}
+        <div class="relative w-full z-50">
+            <div id="notificationDropdown" class="hidden absolute right-4 md:right-8 top-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800 text-sm">Notifications</h3>
+                    <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ unread_notifications.count }} new</span>
+                </div>
+                <div class="max-h-80 overflow-y-auto">
+                    {% for notif in unread_notifications %}
+                    <a href="{{ notif.link|default:'#' }}" class="block px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                        <p class="text-sm text-slate-800 font-medium">{{ notif.message }}</p>
+                        <p class="text-xs text-slate-400 mt-1">{{ notif.created_at|timesince }} ago</p>
+                    </a>
+                    {% empty %}
+                    <div class="px-4 py-6 text-center text-slate-500 text-sm">
+                        You're all caught up!
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if unread_notifications.count > 0 %}
+                <div class="px-4 py-3 border-t border-slate-100 bg-slate-50 text-center">
+                    <a href="{% url 'accounts:mark_notifications_read' %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">Mark all as read</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Scrollable Content Area with Flex-1 to push footer down -->
         <div class="flex-1 overflow-auto bg-slate-50 flex flex-col">
@@ -193,6 +257,24 @@
         </div>
     </main>
 
+    <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById('notificationDropdown');
+            if(dropdown) {
+                dropdown.classList.toggle('hidden');
+            }
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.closest('#desktopNotificationBtn') && !event.target.closest('#notificationDropdown')) {
+                const dropdown = document.getElementById('notificationDropdown');
+                if (dropdown && !dropdown.classList.contains('hidden')) {
+                    dropdown.classList.add('hidden');
+                }
+            }
+        }
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
