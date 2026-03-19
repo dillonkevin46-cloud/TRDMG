@@ -1,12 +1,17 @@
-from django.views.generic import ListView, UpdateView, CreateView
+from django.views.generic import ListView, UpdateView, CreateView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 from django.urls import reverse_lazy
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from .models import Task
 from .forms import TaskForm
 from django.contrib.auth import get_user_model
+import json
 
 User = get_user_model()
 
@@ -149,6 +154,61 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         self.object = form.save(user=self.request.user)
         from django.http import HttpResponseRedirect
         return HttpResponseRedirect(self.get_success_url())
+
+class TaskBoardView(LoginRequiredMixin, TemplateView):
+    template_name = 'todo/task_board.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        qs = Task.objects.all()
+        # Role-based visibility
+        if user.role == 'Staff':
+            qs = qs.filter(assigned_to=user)
+        elif user.role == 'Management':
+            qs = qs.filter(Q(created_by=user) | Q(assigned_to__manager=user))
+        else:
+            if not user.is_superuser:
+                qs = qs.none()
+
+        context['not_started_tasks'] = qs.filter(status='Not Started').order_by('due_date')
+        context['started_tasks'] = qs.filter(status='Started').order_by('due_date')
+        context['stuck_tasks'] = qs.filter(status='Stuck').order_by('due_date')
+        context['completed_tasks'] = qs.filter(status='Completed').order_by('-completed_at')
+
+        return context
+
+@login_required
+@require_POST
+def update_task_status_ajax(request, pk):
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status')
+
+        if new_status in dict(Task._meta.get_field('status').choices):
+            task = get_object_or_404(Task, pk=pk)
+
+            # Additional security: verify user can edit this task
+            user = request.user
+            can_edit = False
+            if user.is_superuser:
+                can_edit = True
+            elif user.role == 'Staff' and task.assigned_to == user:
+                can_edit = True
+            elif user.role == 'Management' and (task.created_by == user or (task.assigned_to and task.assigned_to.manager == user)):
+                can_edit = True
+
+            if can_edit:
+                task.status = new_status
+                task.save()
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid status'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 class TaskCreateView(LoginRequiredMixin, CreateView):
     model = Task
