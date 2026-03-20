@@ -1,261 +1,244 @@
 {% extends 'base.html' %}
 
-{% block title %}Tradecore - Task Board{% endblock %}
-{% block header_title %}Tasks Board{% endblock %}
-
 {% block content %}
-<div class="mb-6 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="px-6 py-4 flex gap-6 border-b border-slate-200">
-        <a href="{% url 'todo:task-list-daily' %}" class="font-medium text-slate-500 hover:text-indigo-600 transition-colors pb-4 -mb-4">Daily</a>
-        <a href="{% url 'todo:task-list-weekly' %}" class="font-medium text-slate-500 hover:text-indigo-600 transition-colors pb-4 -mb-4">Weekly</a>
-        <a href="{% url 'todo:task-list-monthly' %}" class="font-medium text-slate-500 hover:text-indigo-600 transition-colors pb-4 -mb-4">Monthly</a>
-        <a href="{% url 'todo:task-board' %}" class="font-medium text-indigo-600 border-b-2 border-indigo-600 pb-4 -mb-4">Board View</a>
+<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Task Board</h1>
+        <div class="flex space-x-2">
+            <a href="{% url 'todo:task-create' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-sm text-sm transition-colors">
+                + New Task
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                <a href="{% url 'todo:task-list-daily' %}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Daily
+                </a>
+                <a href="{% url 'todo:task-list-weekly' %}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Weekly
+                </a>
+                <a href="{% url 'todo:task-list-monthly' %}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Monthly
+                </a>
+                <a href="{% url 'todo:task-board' %}" class="border-indigo-500 text-indigo-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Board View
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+
+        <!-- Not Started Column -->
+        <div class="bg-gray-50 rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-200 pb-2">
+                <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-gray-400 mr-2"></span>
+                    Not Started
+                </h2>
+                <span class="bg-gray-200 text-gray-600 py-1 px-2.5 rounded-full text-xs font-semibold">{{ not_started|length }}</span>
+            </div>
+
+            <div class="sortable-list min-h-[500px] space-y-3" id="col-not-started" data-status="Not Started">
+                {% for task in not_started %}
+                <div class="bg-white p-4 rounded shadow-sm border border-gray-200 cursor-move hover:shadow-md transition-shadow" data-id="{{ task.id }}">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">
+                            #{{ task.id }}
+                        </span>
+                        <div class="flex -space-x-1 overflow-hidden">
+                            <span class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold" title="{{ task.assigned_to.username }}">
+                                {{ task.assigned_to.username|make_list|first|upper }}
+                            </span>
+                        </div>
+                    </div>
+                    <a href="{% url 'todo:task-detail' task.id %}" class="text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors block mb-1">
+                        {{ task.title }}
+                    </a>
+                    {% if task.description %}
+                        <p class="text-xs text-gray-500 line-clamp-2">{{ task.description }}</p>
+                    {% endif %}
+
+                    <div class="text-xs text-slate-500 mt-2 font-medium">Due: {{ task.due_date|date:"M d, H:i"|default:"N/A" }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- In Progress Column -->
+        <div class="bg-blue-50/50 rounded-lg shadow-sm border border-blue-100 p-4">
+            <div class="flex items-center justify-between mb-4 border-b border-blue-200 pb-2">
+                <h2 class="text-sm font-bold text-blue-700 uppercase tracking-wider flex items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>
+                    In Progress
+                </h2>
+                <span class="bg-blue-100 text-blue-700 py-1 px-2.5 rounded-full text-xs font-semibold">{{ in_progress|length }}</span>
+            </div>
+
+            <div class="sortable-list min-h-[500px] space-y-3" id="col-in-progress" data-status="In Progress">
+                {% for task in in_progress %}
+                <div class="bg-white p-4 rounded shadow-sm border border-blue-100 cursor-move hover:shadow-md transition-shadow border-l-4 border-l-blue-400" data-id="{{ task.id }}">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-xs font-semibold px-2 py-1 rounded bg-blue-50 text-blue-600">
+                            #{{ task.id }}
+                        </span>
+                        <div class="flex -space-x-1 overflow-hidden">
+                            <span class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold" title="{{ task.assigned_to.username }}">
+                                {{ task.assigned_to.username|make_list|first|upper }}
+                            </span>
+                        </div>
+                    </div>
+                    <a href="{% url 'todo:task-detail' task.id %}" class="text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors block mb-1">
+                        {{ task.title }}
+                    </a>
+                    {% if task.description %}
+                        <p class="text-xs text-gray-500 line-clamp-2">{{ task.description }}</p>
+                    {% endif %}
+
+                    <div class="text-xs text-slate-500 mt-2 font-medium">Due: {{ task.due_date|date:"M d, H:i"|default:"N/A" }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Completed Column -->
+        <div class="bg-green-50/50 rounded-lg shadow-sm border border-green-100 p-4 opacity-80 hover:opacity-100 transition-opacity">
+            <div class="flex items-center justify-between mb-4 border-b border-green-200 pb-2">
+                <h2 class="text-sm font-bold text-green-700 uppercase tracking-wider flex items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 mr-2"></span>
+                    Completed
+                </h2>
+                <span class="bg-green-100 text-green-700 py-1 px-2.5 rounded-full text-xs font-semibold">{{ completed|length }}</span>
+            </div>
+
+            <div class="sortable-list min-h-[500px] space-y-3" id="col-completed" data-status="Completed">
+                {% for task in completed %}
+                <div class="bg-white p-4 rounded shadow-sm border border-green-100 cursor-move hover:shadow-md transition-shadow border-l-4 border-l-green-400" data-id="{{ task.id }}">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-xs font-semibold px-2 py-1 rounded bg-green-50 text-green-600 flex items-center">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            #{{ task.id }}
+                        </span>
+                        <div class="flex -space-x-1 overflow-hidden">
+                            <span class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold" title="{{ task.assigned_to.username }}">
+                                {{ task.assigned_to.username|make_list|first|upper }}
+                            </span>
+                        </div>
+                    </div>
+                    <a href="{% url 'todo:task-detail' task.id %}" class="text-sm font-bold text-gray-500 line-through hover:text-indigo-600 transition-colors block mb-1">
+                        {{ task.title }}
+                    </a>
+
+                    <div class="text-xs text-slate-500 mt-2 font-medium">Due: {{ task.due_date|date:"M d, H:i"|default:"N/A" }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
     </div>
 </div>
 
-<!-- Search Form -->
-<form method="GET" class="flex flex-col md:flex-row gap-4 mb-6">
-    <div class="relative flex-1 max-w-md">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-        </div>
-        <input type="text" name="search" value="{{ search|default_if_none:'' }}" placeholder="Search tasks..." class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:placeholder-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm transition-colors">
-    </div>
-
-    <select name="status" class="block w-48 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg shadow-sm bg-white border">
-        <option value="All" {% if status_filter == 'All' %}selected{% endif %}>All</option>
-        <option value="Not Started" {% if status_filter == 'Not Started' %}selected{% endif %}>Not Started</option>
-        <option value="Started" {% if status_filter == 'Started' %}selected{% endif %}>Started</option>
-        <option value="Stuck" {% if status_filter == 'Stuck' %}selected{% endif %}>Stuck</option>
-        <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
-    </select>
-
-    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
-        Filter
-    </button>
-    <a href="{% url 'todo:task-board' %}" class="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors shadow-sm flex items-center">
-        Clear
-    </a>
-</form>
-
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-
-    <!-- Not Started Column -->
-    <div class="bg-slate-100 rounded-xl p-4 flex flex-col h-full min-h-[400px]">
-        <h3 class="font-bold text-slate-700 mb-4 px-2 uppercase text-sm flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-slate-400"></div>
-            Not Started
-            <span class="ml-auto bg-slate-200 text-slate-600 py-0.5 px-2 rounded-full text-xs">{{ not_started_tasks|length }}</span>
-        </h3>
-        <div id="not-started-list" data-status="Not Started" class="flex-1 min-h-[50px] space-y-3">
-            {% for task in not_started_tasks %}
-            <div data-task-id="{{ task.id }}" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab hover:border-indigo-300 transition-colors">
-                <a href="{% url 'todo:task-detail' task.pk %}" class="font-semibold text-slate-800 hover:text-indigo-600 block mb-2">{{ task.title }}</a>
-                <div class="flex justify-between items-center text-xs text-slate-500">
-                    <div class="flex items-center gap-1.5" title="Assigned to {{ task.assigned_to.username }}">
-                        <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase">{{ task.assigned_to.username|make_list|first }}</div>
-                        <span class="truncate max-w-[80px]">{{ task.assigned_to.username }}</span>
-                    </div>
-                    {% if task.due_date %}
-                        <div class="flex items-center gap-1" title="Due: {{ task.due_date|date:'M d, Y H:i' }}">
-                            <svg class="w-3.5 h-3.5 {% if task.is_overdue %}text-red-500{% elif task.is_due_soon %}text-yellow-600{% else %}text-slate-400{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {% if task.is_overdue %}
-                            <span class="font-bold text-red-500">{{ task.due_date|date:"M d" }}</span>
-                            {% elif task.is_due_soon %}
-                            <span class="font-bold text-yellow-600">{{ task.due_date|date:"M d" }}</span>
-                            {% else %}
-                            <span>{{ task.due_date|date:"M d" }}</span>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                    <span class="italic text-slate-400">No due date</span>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Started Column -->
-    <div class="bg-slate-100 rounded-xl p-4 flex flex-col h-full min-h-[400px]">
-        <h3 class="font-bold text-slate-700 mb-4 px-2 uppercase text-sm flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-blue-500"></div>
-            Working on it
-            <span class="ml-auto bg-slate-200 text-slate-600 py-0.5 px-2 rounded-full text-xs">{{ started_tasks|length }}</span>
-        </h3>
-        <div id="started-list" data-status="Started" class="flex-1 min-h-[50px] space-y-3">
-            {% for task in started_tasks %}
-            <div data-task-id="{{ task.id }}" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab hover:border-indigo-300 transition-colors">
-                <a href="{% url 'todo:task-detail' task.pk %}" class="font-semibold text-slate-800 hover:text-indigo-600 block mb-2">{{ task.title }}</a>
-                <div class="flex justify-between items-center text-xs text-slate-500">
-                    <div class="flex items-center gap-1.5" title="Assigned to {{ task.assigned_to.username }}">
-                        <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase">{{ task.assigned_to.username|make_list|first }}</div>
-                        <span class="truncate max-w-[80px]">{{ task.assigned_to.username }}</span>
-                    </div>
-                    {% if task.due_date %}
-                        <div class="flex items-center gap-1" title="Due: {{ task.due_date|date:'M d, Y H:i' }}">
-                            <svg class="w-3.5 h-3.5 {% if task.is_overdue %}text-red-500{% elif task.is_due_soon %}text-yellow-600{% else %}text-slate-400{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {% if task.is_overdue %}
-                            <span class="font-bold text-red-500">{{ task.due_date|date:"M d" }}</span>
-                            {% elif task.is_due_soon %}
-                            <span class="font-bold text-yellow-600">{{ task.due_date|date:"M d" }}</span>
-                            {% else %}
-                            <span>{{ task.due_date|date:"M d" }}</span>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                    <span class="italic text-slate-400">No due date</span>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Stuck Column -->
-    <div class="bg-slate-100 rounded-xl p-4 flex flex-col h-full min-h-[400px]">
-        <h3 class="font-bold text-slate-700 mb-4 px-2 uppercase text-sm flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-red-500"></div>
-            Stuck
-            <span class="ml-auto bg-slate-200 text-slate-600 py-0.5 px-2 rounded-full text-xs">{{ stuck_tasks|length }}</span>
-        </h3>
-        <div id="stuck-list" data-status="Stuck" class="flex-1 min-h-[50px] space-y-3">
-            {% for task in stuck_tasks %}
-            <div data-task-id="{{ task.id }}" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab hover:border-indigo-300 transition-colors">
-                <a href="{% url 'todo:task-detail' task.pk %}" class="font-semibold text-slate-800 hover:text-indigo-600 block mb-2">{{ task.title }}</a>
-                <div class="flex justify-between items-center text-xs text-slate-500">
-                    <div class="flex items-center gap-1.5" title="Assigned to {{ task.assigned_to.username }}">
-                        <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase">{{ task.assigned_to.username|make_list|first }}</div>
-                        <span class="truncate max-w-[80px]">{{ task.assigned_to.username }}</span>
-                    </div>
-                    {% if task.due_date %}
-                        <div class="flex items-center gap-1" title="Due: {{ task.due_date|date:'M d, Y H:i' }}">
-                            <svg class="w-3.5 h-3.5 {% if task.is_overdue %}text-red-500{% elif task.is_due_soon %}text-yellow-600{% else %}text-slate-400{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {% if task.is_overdue %}
-                            <span class="font-bold text-red-500">{{ task.due_date|date:"M d" }}</span>
-                            {% elif task.is_due_soon %}
-                            <span class="font-bold text-yellow-600">{{ task.due_date|date:"M d" }}</span>
-                            {% else %}
-                            <span>{{ task.due_date|date:"M d" }}</span>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                    <span class="italic text-slate-400">No due date</span>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Completed Column -->
-    <div class="bg-slate-100 rounded-xl p-4 flex flex-col h-full min-h-[400px] opacity-75">
-        <h3 class="font-bold text-slate-700 mb-4 px-2 uppercase text-sm flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-green-500"></div>
-            Completed
-            <span class="ml-auto bg-slate-200 text-slate-600 py-0.5 px-2 rounded-full text-xs">{{ completed_tasks|length }}</span>
-        </h3>
-        <div id="completed-list" data-status="Completed" class="flex-1 min-h-[50px] space-y-3">
-            {% for task in completed_tasks %}
-            <div data-task-id="{{ task.id }}" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab hover:border-indigo-300 transition-colors">
-                <a href="{% url 'todo:task-detail' task.pk %}" class="font-semibold text-slate-500 line-through hover:text-indigo-600 block mb-2">{{ task.title }}</a>
-                <div class="flex justify-between items-center text-xs text-slate-500">
-                    <div class="flex items-center gap-1.5 opacity-75" title="Assigned to {{ task.assigned_to.username }}">
-                        <div class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold uppercase">{{ task.assigned_to.username|make_list|first }}</div>
-                        <span class="truncate max-w-[80px]">{{ task.assigned_to.username }}</span>
-                    </div>
-                    <div class="flex items-center gap-1" title="Completed: {{ task.completed_at|date:'M d, Y H:i' }}">
-                        <svg class="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>{{ task.completed_at|date:"M d" }}</span>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
+<!-- SortableJS library for Drag and Drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const columns = [
-        document.getElementById('not-started-list'),
-        document.getElementById('started-list'),
-        document.getElementById('stuck-list'),
-        document.getElementById('completed-list')
-    ];
+    document.addEventListener('DOMContentLoaded', function() {
+        const lists = document.querySelectorAll('.sortable-list');
+        const csrfToken = '{{ csrf_token }}';
 
-    columns.forEach(col => {
-        if(col) {
-            new Sortable(col, {
-                group: 'tasks', // set both lists to same group
+        lists.forEach(list => {
+            new Sortable(list, {
+                group: 'shared', // set both lists to same group
                 animation: 150,
-                ghostClass: 'opacity-50',
+                ghostClass: 'bg-indigo-50',
+                dragClass: 'shadow-2xl',
                 onEnd: function (evt) {
                     const itemEl = evt.item;  // dragged HTMLElement
                     const toList = evt.to;    // target list
-                    const fromList = evt.from;
 
-                    if (toList === fromList) {
-                        return; // Did not change columns
-                    }
-
-                    const taskId = itemEl.getAttribute('data-task-id');
+                    const taskId = itemEl.getAttribute('data-id');
                     const newStatus = toList.getAttribute('data-status');
 
-                    // Note: If dragging into 'Stuck', we ideally need a comment.
-                    // To keep this AJAX robust without a complex modal,
-                    // we'll send the request. If the backend requires a comment,
-                    // we would need to handle that, but right now the model save()
-                    // does not inherently fail on 'Stuck' without a comment (only the form does).
-                    // To enforce it fully in the UI we would open a modal here, but for this phase,
-                    // we rely on the backend view we wrote.
+                    // Only update if the status actually changed
+                    if (evt.from !== toList) {
+                        updateTaskStatus(taskId, newStatus);
 
-                    fetch(`/todo/${taskId}/update-status-ajax/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': '{{ csrf_token }}'
-                        },
-                        body: JSON.stringify({ status: newStatus })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            console.log('Task status updated successfully.');
-                            // Optionally could reload page to update counts, or dynamically update the counts
-                        } else {
-                            console.error('Failed to update task:', data.error);
-                            // Revert visually if failed
-                            fromList.appendChild(itemEl);
-                            if(data.error === 'Unauthorized') {
-                                alert("You do not have permission to edit this task.");
-                            } else {
-                                alert("Failed to update task status.");
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        fromList.appendChild(itemEl); // Revert visually
-                    });
+                        // Update visual styling based on new column
+                        updateCardStyling(itemEl, newStatus);
+
+                        // Update counters
+                        updateCounters();
+                    }
+                },
+            });
+        });
+
+        function updateCardStyling(card, status) {
+            // Reset border classes
+            card.className = card.className.replace(/border-l-4 border-l-\w+-400/g, '');
+            card.className = card.className.replace(/border-\w+-100/g, 'border-gray-200');
+
+            // Get elements
+            const statusBadge = card.querySelector('span.px-2.py-1');
+            const titleLink = card.querySelector('a.font-bold');
+
+            if (status === 'Not Started') {
+                statusBadge.className = 'text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600';
+                statusBadge.innerHTML = `#${card.getAttribute('data-id')}`;
+                titleLink.className = 'text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors block mb-1';
+            } else if (status === 'In Progress') {
+                card.classList.add('border-l-4', 'border-l-blue-400', 'border-blue-100');
+                card.classList.remove('border-gray-200');
+                statusBadge.className = 'text-xs font-semibold px-2 py-1 rounded bg-blue-50 text-blue-600';
+                statusBadge.innerHTML = `#${card.getAttribute('data-id')}`;
+                titleLink.className = 'text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors block mb-1';
+            } else if (status === 'Completed') {
+                card.classList.add('border-l-4', 'border-l-green-400', 'border-green-100');
+                card.classList.remove('border-gray-200');
+                statusBadge.className = 'text-xs font-semibold px-2 py-1 rounded bg-green-50 text-green-600 flex items-center';
+                statusBadge.innerHTML = `<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>#${card.getAttribute('data-id')}`;
+                titleLink.className = 'text-sm font-bold text-gray-500 line-through hover:text-indigo-600 transition-colors block mb-1';
+            }
+        }
+
+        function updateCounters() {
+            const notStartedCount = document.getElementById('col-not-started').children.length;
+            const inProgressCount = document.getElementById('col-in-progress').children.length;
+            const completedCount = document.getElementById('col-completed').children.length;
+
+            document.querySelector('#col-not-started').previousElementSibling.querySelector('span.bg-gray-200').textContent = notStartedCount;
+            document.querySelector('#col-in-progress').previousElementSibling.querySelector('span.bg-blue-100').textContent = inProgressCount;
+            document.querySelector('#col-completed').previousElementSibling.querySelector('span.bg-green-100').textContent = completedCount;
+        }
+
+        function updateTaskStatus(taskId, newStatus) {
+            fetch(`/todo/update_status/${taskId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({
+                    'status': newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log('Task updated successfully');
+                } else {
+                    console.error('Error updating task:', data.message);
+                    alert('Error saving changes. Please refresh the page.');
                 }
+            })
+            .catch(error => {
+                console.error('Network error:', error);
+                alert('Network error. Please try again.');
             });
         }
     });
-});
 </script>
 {% endblock %}
