@@ -1,13 +1,13 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from django.views.generic import ListView, UpdateView, CreateView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 from django.urls import reverse_lazy
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, redirect
 from .models import Task, PersonalNote
 from .forms import TaskForm
 from django.contrib.auth import get_user_model
