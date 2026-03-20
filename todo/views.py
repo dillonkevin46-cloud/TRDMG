@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from django.views.generic import ListView, UpdateView, CreateView, TemplateView
+from django.views.generic import ListView, UpdateView, CreateView, TemplateView, DetailView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -160,6 +160,41 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         self.object = form.save(user=self.request.user)
         from django.http import HttpResponseRedirect
         return HttpResponseRedirect(self.get_success_url())
+
+class TaskDetailView(LoginRequiredMixin, DetailView):
+    model = Task
+    template_name = 'todo/task_detail.html'
+    context_object_name = 'task'
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = super().get_queryset()
+
+        if user.role == 'Staff':
+            qs = qs.filter(assigned_to=user)
+        elif user.role == 'Management':
+            qs = qs.filter(Q(created_by=user) | Q(assigned_to__manager=user))
+        else:
+            if user.is_superuser:
+                return qs
+            return qs.none()
+        return qs
+
+class TaskDeleteView(LoginRequiredMixin, DeleteView):
+    model = Task
+    template_name = 'todo/task_confirm_delete.html'
+    success_url = reverse_lazy('todo:task-list-daily')
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = super().get_queryset()
+
+        if user.is_superuser:
+            return qs
+        elif user.role == 'Management':
+            return qs.filter(Q(created_by=user) | Q(assigned_to__manager=user))
+        else:
+            return qs.none()
 
 @login_required
 def personal_notes_view(request):
