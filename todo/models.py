@@ -142,3 +142,12 @@ class TaskAttachment(models.Model):
 
     def __str__(self):
         return f"Attachment for {self.task.title} by {self.uploaded_by.username}"
+
+class PersonalNote(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='personal_notes')
+    text = models.CharField(max_length=500)
+    is_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.text[:30]}"

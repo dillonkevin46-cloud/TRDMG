@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Tradecore - My Notes{% endblock %}
+{% block header_title %}My Personal Notes{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <!-- Top Section -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6 p-6">
+        <h3 class="text-xl font-bold text-slate-800 mb-4">Quick Scratchpad</h3>
+        <form method="POST" class="flex items-center gap-4">
+            {% csrf_token %}
+            <div class="relative flex-1">
+                <input type="text" name="text" required placeholder="What do you need to remember today?" class="block w-full pl-4 pr-3 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors">
+            </div>
+            <button type="submit" class="px-6 py-3 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex-shrink-0">
+                Add Note
+            </button>
+        </form>
+    </div>
+
+    <!-- Bottom Section -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
+            <h4 class="font-semibold text-slate-700">Your Notes</h4>
+        </div>
+        <div class="divide-y divide-slate-100">
+            {% for note in notes %}
+            <div class="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <input type="checkbox" data-note-id="{{ note.id }}" class="note-checkbox h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" {% if note.is_completed %}checked{% endif %}>
+
+                    <span id="note-text-{{ note.id }}" class="text-sm font-medium transition-all {% if note.is_completed %}line-through text-slate-400{% else %}text-slate-800{% endif %} truncate">
+                        {{ note.text }}
+                    </span>
+                </div>
+
+                <div class="flex-shrink-0 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <a href="{% url 'todo:delete-note' note.id %}" class="p-2 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors inline-flex" title="Delete Note">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-8 text-center flex flex-col items-center justify-center">
+                <svg class="w-12 h-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <p class="text-slate-500 font-medium">Your scratchpad is empty.</p>
+                <p class="text-sm text-slate-400 mt-1">Add a note above to get started.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.note-checkbox');
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const noteId = this.getAttribute('data-note-id');
+            const textElement = document.getElementById(`note-text-${noteId}`);
+            const isChecked = this.checked;
+
+            // Optimistic UI update
+            if (isChecked) {
+                textElement.classList.add('line-through', 'text-slate-400');
+                textElement.classList.remove('text-slate-800');
+            } else {
+                textElement.classList.remove('line-through', 'text-slate-400');
+                textElement.classList.add('text-slate-800');
+            }
+
+            // Backend update
+            fetch(`/todo/notes/${noteId}/toggle/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Failed to toggle note.');
+                    // Revert visually if failed
+                    this.checked = !isChecked;
+                    if (!isChecked) {
+                        textElement.classList.add('line-through', 'text-slate-400');
+                        textElement.classList.remove('text-slate-800');
+                    } else {
+                        textElement.classList.remove('line-through', 'text-slate-400');
+                        textElement.classList.add('text-slate-800');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
