@@ -52,20 +52,25 @@
         <div id="not-started-list" data-status="Not Started" class="flex-1 min-h-[50px] space-y-3">
             {% for task in not_started_tasks %}
             <div data-task-id="{{ task.id }}" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab hover:border-indigo-300 transition-colors">
-                <a href="{% url 'todo:task-update' task.pk %}" class="font-semibold text-slate-800 hover:text-indigo-600 block mb-2">{{ task.title }}</a>
+                <a href="{% url 'todo:task-detail' task.pk %}" class="font-semibold text-slate-800 hover:text-indigo-600 block mb-2">{{ task.title }}</a>
                 <div class="flex justify-between items-center text-xs text-slate-500">
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-1.5" title="Assigned to {{ task.assigned_to.username }}">
                         <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase">{{ task.assigned_to.username|make_list|first }}</div>
                         <span class="truncate max-w-[80px]">{{ task.assigned_to.username }}</span>
                     </div>
                     {% if task.due_date %}
-                        {% if task.is_overdue %}
-                        <span class="font-bold text-red-500">{{ task.due_date|date:"M d" }}</span>
-                        {% elif task.is_due_soon %}
-                        <span class="font-bold text-yellow-600">{{ task.due_date|date:"M d" }}</span>
-                        {% else %}
-                        <span>{{ task.due_date|date:"M d" }}</span>
-                        {% endif %}
+                        <div class="flex items-center gap-1" title="Due: {{ task.due_date|date:'M d, Y H:i' }}">
+                            <svg class="w-3.5 h-3.5 {% if task.is_overdue %}text-red-500{% elif task.is_due_soon %}text-yellow-600{% else %}text-slate-400{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {% if task.is_overdue %}
+                            <span class="font-bold text-red-500">{{ task.due_date|date:"M d" }}</span>
+                            {% elif task.is_due_soon %}
+                            <span class="font-bold text-yellow-600">{{ task.due_date|date:"M d" }}</span>
+                            {% else %}
+                            <span>{{ task.due_date|date:"M d" }}</span>
+                            {% endif %}
+                        </div>
                     {% else %}
                     <span class="italic text-slate-400">No due date</span>
                     {% endif %}
@@ -85,20 +90,25 @@
         <div id="started-list" data-status="Started" class="flex-1 min-h-[50px] space-y-3">
             {% for task in started_tasks %}
             <div data-task-id="{{ task.id }}" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab hover:border-indigo-300 transition-colors">
-                <a href="{% url 'todo:task-update' task.pk %}" class="font-semibold text-slate-800 hover:text-indigo-600 block mb-2">{{ task.title }}</a>
+                <a href="{% url 'todo:task-detail' task.pk %}" class="font-semibold text-slate-800 hover:text-indigo-600 block mb-2">{{ task.title }}</a>
                 <div class="flex justify-between items-center text-xs text-slate-500">
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-1.5" title="Assigned to {{ task.assigned_to.username }}">
                         <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase">{{ task.assigned_to.username|make_list|first }}</div>
                         <span class="truncate max-w-[80px]">{{ task.assigned_to.username }}</span>
                     </div>
                     {% if task.due_date %}
-                        {% if task.is_overdue %}
-                        <span class="font-bold text-red-500">{{ task.due_date|date:"M d" }}</span>
-                        {% elif task.is_due_soon %}
-                        <span class="font-bold text-yellow-600">{{ task.due_date|date:"M d" }}</span>
-                        {% else %}
-                        <span>{{ task.due_date|date:"M d" }}</span>
-                        {% endif %}
+                        <div class="flex items-center gap-1" title="Due: {{ task.due_date|date:'M d, Y H:i' }}">
+                            <svg class="w-3.5 h-3.5 {% if task.is_overdue %}text-red-500{% elif task.is_due_soon %}text-yellow-600{% else %}text-slate-400{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {% if task.is_overdue %}
+                            <span class="font-bold text-red-500">{{ task.due_date|date:"M d" }}</span>
+                            {% elif task.is_due_soon %}
+                            <span class="font-bold text-yellow-600">{{ task.due_date|date:"M d" }}</span>
+                            {% else %}
+                            <span>{{ task.due_date|date:"M d" }}</span>
+                            {% endif %}
+                        </div>
                     {% else %}
                     <span class="italic text-slate-400">No due date</span>
                     {% endif %}
@@ -118,20 +128,25 @@
         <div id="stuck-list" data-status="Stuck" class="flex-1 min-h-[50px] space-y-3">
             {% for task in stuck_tasks %}
             <div data-task-id="{{ task.id }}" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab hover:border-indigo-300 transition-colors">
-                <a href="{% url 'todo:task-update' task.pk %}" class="font-semibold text-slate-800 hover:text-indigo-600 block mb-2">{{ task.title }}</a>
+                <a href="{% url 'todo:task-detail' task.pk %}" class="font-semibold text-slate-800 hover:text-indigo-600 block mb-2">{{ task.title }}</a>
                 <div class="flex justify-between items-center text-xs text-slate-500">
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-1.5" title="Assigned to {{ task.assigned_to.username }}">
                         <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold uppercase">{{ task.assigned_to.username|make_list|first }}</div>
                         <span class="truncate max-w-[80px]">{{ task.assigned_to.username }}</span>
                     </div>
                     {% if task.due_date %}
-                        {% if task.is_overdue %}
-                        <span class="font-bold text-red-500">{{ task.due_date|date:"M d" }}</span>
-                        {% elif task.is_due_soon %}
-                        <span class="font-bold text-yellow-600">{{ task.due_date|date:"M d" }}</span>
-                        {% else %}
-                        <span>{{ task.due_date|date:"M d" }}</span>
-                        {% endif %}
+                        <div class="flex items-center gap-1" title="Due: {{ task.due_date|date:'M d, Y H:i' }}">
+                            <svg class="w-3.5 h-3.5 {% if task.is_overdue %}text-red-500{% elif task.is_due_soon %}text-yellow-600{% else %}text-slate-400{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {% if task.is_overdue %}
+                            <span class="font-bold text-red-500">{{ task.due_date|date:"M d" }}</span>
+                            {% elif task.is_due_soon %}
+                            <span class="font-bold text-yellow-600">{{ task.due_date|date:"M d" }}</span>
+                            {% else %}
+                            <span>{{ task.due_date|date:"M d" }}</span>
+                            {% endif %}
+                        </div>
                     {% else %}
                     <span class="italic text-slate-400">No due date</span>
                     {% endif %}
@@ -151,13 +166,18 @@
         <div id="completed-list" data-status="Completed" class="flex-1 min-h-[50px] space-y-3">
             {% for task in completed_tasks %}
             <div data-task-id="{{ task.id }}" class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab hover:border-indigo-300 transition-colors">
-                <a href="{% url 'todo:task-update' task.pk %}" class="font-semibold text-slate-500 line-through hover:text-indigo-600 block mb-2">{{ task.title }}</a>
+                <a href="{% url 'todo:task-detail' task.pk %}" class="font-semibold text-slate-500 line-through hover:text-indigo-600 block mb-2">{{ task.title }}</a>
                 <div class="flex justify-between items-center text-xs text-slate-500">
-                    <div class="flex items-center gap-1.5 opacity-75">
+                    <div class="flex items-center gap-1.5 opacity-75" title="Assigned to {{ task.assigned_to.username }}">
                         <div class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold uppercase">{{ task.assigned_to.username|make_list|first }}</div>
                         <span class="truncate max-w-[80px]">{{ task.assigned_to.username }}</span>
                     </div>
-                    <span>{{ task.completed_at|date:"M d" }}</span>
+                    <div class="flex items-center gap-1" title="Completed: {{ task.completed_at|date:'M d, Y H:i' }}">
+                        <svg class="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>{{ task.completed_at|date:"M d" }}</span>
+                    </div>
                 </div>
             </div>
             {% endfor %}
