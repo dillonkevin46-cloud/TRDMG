@@ -81,13 +81,14 @@ class Task(models.Model):
 
             if self.status == 'Started' and old_status != 'Started' and not self.started_at:
                 self.started_at = timezone.now()
-            elif self.status == 'Completed' and old_status != 'Completed':
-                self.completed_at = timezone.now()
         else:
             if self.status == 'Started':
                 self.started_at = timezone.now()
-            elif self.status == 'Completed':
-                self.completed_at = timezone.now()
+
+        if self.status == 'Completed' and not self.completed_at:
+            self.completed_at = timezone.now()
+        elif self.status != 'Completed' and self.completed_at is not None:
+            self.completed_at = None
 
         super().save(*args, **kwargs)
 
