@@ -11,4 +11,7 @@ urlpatterns = [
     path('task-create/', views.TaskCreateView.as_view(), name='task-create'),
     path('board/', views.TaskBoardView.as_view(), name='task-board'),
     path('<int:pk>/update-status-ajax/', views.update_task_status_ajax, name='task-update-status-ajax'),
+    path('notes/', views.personal_notes_view, name='personal-notes'),
+    path('notes/<int:note_id>/toggle/', views.toggle_note_status, name='toggle-note'),
+    path('notes/<int:note_id>/delete/', views.delete_note, name='delete-note'),
 ]

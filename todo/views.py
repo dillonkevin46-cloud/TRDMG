@@ -7,8 +7,8 @@ from django.utils import timezone
 from datetime import timedelta
 from django.urls import reverse_lazy
 from django.db.models import Q
-from django.shortcuts import get_object_or_404
-from .models import Task
+from django.shortcuts import get_object_or_404, redirect
+from .models import Task, PersonalNote
 from .forms import TaskForm
 from django.contrib.auth import get_user_model
 import json
@@ -160,6 +160,31 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         self.object = form.save(user=self.request.user)
         from django.http import HttpResponseRedirect
         return HttpResponseRedirect(self.get_success_url())
+
+@login_required
+def personal_notes_view(request):
+    if request.method == 'POST':
+        text = request.POST.get('text')
+        if text:
+            PersonalNote.objects.create(user=request.user, text=text)
+        return redirect('todo:personal-notes')
+
+    notes = PersonalNote.objects.filter(user=request.user).order_by('is_completed', '-created_at')
+    return render(request, 'todo/note_list.html', {'notes': notes})
+
+@login_required
+@require_POST
+def toggle_note_status(request, note_id):
+    note = get_object_or_404(PersonalNote, id=note_id, user=request.user)
+    note.is_completed = not note.is_completed
+    note.save()
+    return JsonResponse({'success': True, 'is_completed': note.is_completed})
+
+@login_required
+def delete_note(request, note_id):
+    note = get_object_or_404(PersonalNote, id=note_id, user=request.user)
+    note.delete()
+    return redirect('todo:personal-notes')
 
 class TaskBoardView(LoginRequiredMixin, TemplateView):
     template_name = 'todo/task_board.html'
