@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}Tradecore - Management KPI{% endblock %}
+{% block header_title %}Management KPI Dashboard{% endblock %}
+
+{% block content %}
+<!-- Top Action Bar -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div>
+        <h2 class="text-2xl font-bold text-slate-800">Team Performance</h2>
+        <p class="text-sm text-slate-500 mt-1">Select a staff member to view their objective evaluations.</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{% url 'kpi:objective_create' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm font-medium">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create New Objective
+        </a>
+        <a href="{% url 'kpi:evaluation_create' %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm font-medium">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            Log Daily Evaluation
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Staff Selector Sidebar -->
+    <div class="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-fit">
+        <div class="p-4 border-b border-slate-100 bg-slate-50">
+            <h3 class="font-semibold text-slate-800">Team Members</h3>
+        </div>
+        <div class="p-2 space-y-1 max-h-[500px] overflow-y-auto">
+            {% for staff in staff_users %}
+            <a href="?staff_id={{ staff.id }}" class="flex items-center gap-3 p-3 rounded-xl transition-colors {% if selected_staff and staff.id == selected_staff.id %}bg-indigo-50 border border-indigo-100{% else %}hover:bg-slate-50 border border-transparent{% endif %}">
+                <div class="w-10 h-10 rounded-full {% if selected_staff and staff.id == selected_staff.id %}bg-indigo-200 text-indigo-700{% else %}bg-slate-200 text-slate-600{% endif %} flex items-center justify-center font-bold text-sm uppercase">
+                    {{ staff.username|make_list|first }}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-900 truncate">{{ staff.username }}</p>
+                    <p class="text-xs text-slate-500 truncate">{{ staff.department.name|default:"No Department" }}</p>
+                </div>
+            </a>
+            {% empty %}
+            <div class="p-4 text-sm text-slate-500 text-center">
+                No staff members found.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Chart Area -->
+    <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center flex-wrap gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-slate-800">
+                    {% if selected_staff %}
+                        Spider Graph: {{ selected_staff.username }}
+                    {% else %}
+                        Select a Staff Member
+                    {% endif %}
+                </h3>
+                <p class="text-sm text-slate-500 mt-1">Visualizing average objective scores (Scale 0-10)</p>
+            </div>
+            <div class="flex items-center">
+                {% if selected_staff %}
+                <a href="{% url 'kpi:download_staff_report_pdf' selected_staff.id %}" class="px-4 py-2 bg-white text-indigo-600 border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2 text-sm font-medium">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download PDF Report
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="p-6 flex-1 relative min-h-[400px]">
+            {% if selected_staff %}
+                <!-- Chart Container -->
+                <canvas id="kpiRadarChart"></canvas>
+            {% else %}
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-3">
+                    <svg class="w-16 h-16 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <p class="font-medium text-lg">No data to display</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent KPI Evaluations Table -->
+{% if selected_staff %}
+<div class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+    <div class="p-6 border-b border-slate-100 bg-white">
+        <h3 class="text-lg font-bold text-slate-800">Evaluation History Board</h3>
+        <p class="text-sm text-slate-500 mt-1">Review recent evaluations for {{ selected_staff.username }}</p>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm whitespace-nowrap">
+            <thead class="uppercase tracking-wider border-b border-slate-200 bg-slate-50 text-slate-500">
+                <tr>
+                    <th scope="col" class="px-6 py-3 font-medium w-32">Date</th>
+                    <th scope="col" class="px-6 py-3 font-medium w-1/4">Objective</th>
+                    <th scope="col" class="px-6 py-3 font-medium text-center w-32">Score</th>
+                    <th scope="col" class="px-6 py-3 font-medium">Reason</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white">
+                {% for eval in recent_evaluations %}
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="px-6 py-4 text-slate-600 font-medium border-r border-slate-50">
+                        {{ eval.date|date:"M d, Y" }}
+                    </td>
+                    <td class="px-6 py-4 border-r border-slate-50">
+                        <p class="font-bold text-slate-900">{{ eval.objective.title }}</p>
+                    </td>
+                    <td class="px-6 py-4 border-r border-slate-50 text-center">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold
+                            {% if eval.score == 'Great' or eval.score == 'Good' %}bg-green-100 text-green-800
+                            {% elif eval.score == 'Normal' %}bg-yellow-100 text-yellow-800
+                            {% elif eval.score == 'Bad' or eval.score == 'Very Bad' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ eval.score }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-600 truncate max-w-md" title="{{ eval.reason }}">
+                        {{ eval.reason|default:"<span class='italic text-slate-400'>No reason provided</span>"|safe }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="px-6 py-12 text-center text-slate-500">
+                        <div class="flex flex-col items-center justify-center gap-2">
+                            <svg class="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                            <span>No KPI evaluations found for this staff member.</span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if selected_staff %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('kpiRadarChart').getContext('2d');
+
+        // Data injected from Django view
+        const rawLabels = JSON.parse('{{ radar_labels_json|escapejs }}');
+        const rawData = JSON.parse('{{ radar_data_json|escapejs }}');
+
+        // Chart.js Radar Configuration
+        const kpiChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: rawLabels,
+                datasets: [{
+                    label: 'Average Objective Score',
+                    data: rawData,
+                    backgroundColor: 'rgba(79, 70, 229, 0.2)', // Translucent Indigo
+                    borderColor: '#4f46e5', // Indigo
+                    pointBackgroundColor: '#4f46e5',
+                    pointBorderColor: '#ffffff',
+                    pointHoverBackgroundColor: '#ffffff',
+                    pointHoverBorderColor: '#4f46e5',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { size: 13, family: "'Inter', sans-serif" },
+                        bodyFont: { size: 14, weight: 'bold', family: "'Inter', sans-serif" },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `Avg Score: ${context.raw} / 10`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        min: 0,
+                        max: 10,
+                        ticks: {
+                            stepSize: 2,
+                            backdropColor: 'transparent',
+                            font: { family: "'Inter', sans-serif", size: 11, weight: '500' },
+                            color: '#64748b' // slate-500
+                        },
+                        grid: {
+                            color: 'rgba(226, 232, 240, 1)' // slate-200
+                        },
+                        angleLines: {
+                            color: 'rgba(226, 232, 240, 1)' // slate-200
+                        },
+                        pointLabels: {
+                            font: { family: "'Inter', sans-serif", size: 13, weight: '600' },
+                            color: '#334155' // slate-700
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}
