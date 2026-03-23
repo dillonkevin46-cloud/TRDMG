@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
 
         <!-- Not Started Column -->
         <div class="bg-gray-50 rounded-lg shadow-sm border border-gray-200 p-4">
@@ -40,12 +40,12 @@
                     <span class="w-2.5 h-2.5 rounded-full bg-gray-400 mr-2"></span>
                     Not Started
                 </h2>
-                <span class="bg-gray-200 text-gray-600 py-1 px-2.5 rounded-full text-xs font-semibold">{{ not_started|length }}</span>
+                <span class="bg-gray-200 text-gray-600 py-1 px-2.5 rounded-full text-xs font-semibold">{{ not_started_tasks|length }}</span>
             </div>
 
             <div class="sortable-list min-h-[500px] space-y-3" id="col-not-started" data-status="Not Started">
-                {% for task in not_started %}
-                <div class="bg-white p-4 rounded shadow-sm border border-gray-200 cursor-move hover:shadow-md transition-shadow" data-id="{{ task.id }}">
+                {% for task in not_started_tasks %}
+                <div class="bg-white p-4 rounded shadow-sm border border-gray-200 cursor-move hover:shadow-md transition-shadow" data-task-id="{{ task.id }}">
                     <div class="flex justify-between items-start mb-2">
                         <span class="text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600">
                             #{{ task.id }}
@@ -69,21 +69,57 @@
             </div>
         </div>
 
-        <!-- In Progress Column -->
+        <!-- Started Column -->
         <div class="bg-blue-50/50 rounded-lg shadow-sm border border-blue-100 p-4">
             <div class="flex items-center justify-between mb-4 border-b border-blue-200 pb-2">
                 <h2 class="text-sm font-bold text-blue-700 uppercase tracking-wider flex items-center">
                     <span class="w-2.5 h-2.5 rounded-full bg-blue-500 mr-2"></span>
-                    In Progress
+                    Started
                 </h2>
-                <span class="bg-blue-100 text-blue-700 py-1 px-2.5 rounded-full text-xs font-semibold">{{ in_progress|length }}</span>
+                <span class="bg-blue-100 text-blue-700 py-1 px-2.5 rounded-full text-xs font-semibold">{{ started_tasks|length }}</span>
             </div>
 
-            <div class="sortable-list min-h-[500px] space-y-3" id="col-in-progress" data-status="In Progress">
-                {% for task in in_progress %}
-                <div class="bg-white p-4 rounded shadow-sm border border-blue-100 cursor-move hover:shadow-md transition-shadow border-l-4 border-l-blue-400" data-id="{{ task.id }}">
+            <div class="sortable-list min-h-[500px] space-y-3" id="col-started" data-status="Started">
+                {% for task in started_tasks %}
+                <div class="bg-white p-4 rounded shadow-sm border border-blue-100 cursor-move hover:shadow-md transition-shadow border-l-4 border-l-blue-400" data-task-id="{{ task.id }}">
                     <div class="flex justify-between items-start mb-2">
                         <span class="text-xs font-semibold px-2 py-1 rounded bg-blue-50 text-blue-600">
+                            #{{ task.id }}
+                        </span>
+                        <div class="flex -space-x-1 overflow-hidden">
+                            <span class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold" title="{{ task.assigned_to.username }}">
+                                {{ task.assigned_to.username|make_list|first|upper }}
+                            </span>
+                        </div>
+                    </div>
+                    <a href="{% url 'todo:task-detail' task.id %}" class="text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors block mb-1">
+                        {{ task.title }}
+                    </a>
+                    {% if task.description %}
+                        <p class="text-xs text-gray-500 line-clamp-2">{{ task.description }}</p>
+                    {% endif %}
+
+                    <div class="text-xs text-slate-500 mt-2 font-medium">Due: {{ task.due_date|date:"M d, H:i"|default:"N/A" }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Stuck Column -->
+        <div class="bg-red-50/50 rounded-lg shadow-sm border border-red-100 p-4">
+            <div class="flex items-center justify-between mb-4 border-b border-red-200 pb-2">
+                <h2 class="text-sm font-bold text-red-700 uppercase tracking-wider flex items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 mr-2"></span>
+                    Stuck
+                </h2>
+                <span class="bg-red-100 text-red-700 py-1 px-2.5 rounded-full text-xs font-semibold">{{ stuck_tasks|length }}</span>
+            </div>
+
+            <div class="sortable-list min-h-[500px] space-y-3" id="col-stuck" data-status="Stuck">
+                {% for task in stuck_tasks %}
+                <div class="bg-white p-4 rounded shadow-sm border border-red-100 cursor-move hover:shadow-md transition-shadow border-l-4 border-l-red-400" data-task-id="{{ task.id }}">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-xs font-semibold px-2 py-1 rounded bg-red-50 text-red-600">
                             #{{ task.id }}
                         </span>
                         <div class="flex -space-x-1 overflow-hidden">
@@ -112,12 +148,12 @@
                     <span class="w-2.5 h-2.5 rounded-full bg-green-500 mr-2"></span>
                     Completed
                 </h2>
-                <span class="bg-green-100 text-green-700 py-1 px-2.5 rounded-full text-xs font-semibold">{{ completed|length }}</span>
+                <span class="bg-green-100 text-green-700 py-1 px-2.5 rounded-full text-xs font-semibold">{{ completed_tasks|length }}</span>
             </div>
 
             <div class="sortable-list min-h-[500px] space-y-3" id="col-completed" data-status="Completed">
-                {% for task in completed %}
-                <div class="bg-white p-4 rounded shadow-sm border border-green-100 cursor-move hover:shadow-md transition-shadow border-l-4 border-l-green-400" data-id="{{ task.id }}">
+                {% for task in completed_tasks %}
+                <div class="bg-white p-4 rounded shadow-sm border border-green-100 cursor-move hover:shadow-md transition-shadow border-l-4 border-l-green-400" data-task-id="{{ task.id }}">
                     <div class="flex justify-between items-start mb-2">
                         <span class="text-xs font-semibold px-2 py-1 rounded bg-green-50 text-green-600 flex items-center">
                             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
@@ -151,7 +187,7 @@
 
         lists.forEach(list => {
             new Sortable(list, {
-                group: 'shared', // set both lists to same group
+                group: 'shared', // set all lists to same group
                 animation: 150,
                 ghostClass: 'bg-indigo-50',
                 dragClass: 'shadow-2xl',
@@ -159,7 +195,7 @@
                     const itemEl = evt.item;  // dragged HTMLElement
                     const toList = evt.to;    // target list
 
-                    const taskId = itemEl.getAttribute('data-id');
+                    const taskId = itemEl.getAttribute('data-task-id');
                     const newStatus = toList.getAttribute('data-status');
 
                     // Only update if the status actually changed
@@ -187,50 +223,58 @@
 
             if (status === 'Not Started') {
                 statusBadge.className = 'text-xs font-semibold px-2 py-1 rounded bg-gray-100 text-gray-600';
-                statusBadge.innerHTML = `#${card.getAttribute('data-id')}`;
+                statusBadge.innerHTML = `#${card.getAttribute('data-task-id')}`;
                 titleLink.className = 'text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors block mb-1';
-            } else if (status === 'In Progress') {
+            } else if (status === 'Started') {
                 card.classList.add('border-l-4', 'border-l-blue-400', 'border-blue-100');
                 card.classList.remove('border-gray-200');
                 statusBadge.className = 'text-xs font-semibold px-2 py-1 rounded bg-blue-50 text-blue-600';
-                statusBadge.innerHTML = `#${card.getAttribute('data-id')}`;
+                statusBadge.innerHTML = `#${card.getAttribute('data-task-id')}`;
+                titleLink.className = 'text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors block mb-1';
+            } else if (status === 'Stuck') {
+                card.classList.add('border-l-4', 'border-l-red-400', 'border-red-100');
+                card.classList.remove('border-gray-200');
+                statusBadge.className = 'text-xs font-semibold px-2 py-1 rounded bg-red-50 text-red-600';
+                statusBadge.innerHTML = `#${card.getAttribute('data-task-id')}`;
                 titleLink.className = 'text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors block mb-1';
             } else if (status === 'Completed') {
                 card.classList.add('border-l-4', 'border-l-green-400', 'border-green-100');
                 card.classList.remove('border-gray-200');
                 statusBadge.className = 'text-xs font-semibold px-2 py-1 rounded bg-green-50 text-green-600 flex items-center';
-                statusBadge.innerHTML = `<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>#${card.getAttribute('data-id')}`;
+                statusBadge.innerHTML = `<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>#${card.getAttribute('data-task-id')}`;
                 titleLink.className = 'text-sm font-bold text-gray-500 line-through hover:text-indigo-600 transition-colors block mb-1';
             }
         }
 
         function updateCounters() {
             const notStartedCount = document.getElementById('col-not-started').children.length;
-            const inProgressCount = document.getElementById('col-in-progress').children.length;
+            const startedCount = document.getElementById('col-started').children.length;
+            const stuckCount = document.getElementById('col-stuck').children.length;
             const completedCount = document.getElementById('col-completed').children.length;
 
             document.querySelector('#col-not-started').previousElementSibling.querySelector('span.bg-gray-200').textContent = notStartedCount;
-            document.querySelector('#col-in-progress').previousElementSibling.querySelector('span.bg-blue-100').textContent = inProgressCount;
+            document.querySelector('#col-started').previousElementSibling.querySelector('span.bg-blue-100').textContent = startedCount;
+            document.querySelector('#col-stuck').previousElementSibling.querySelector('span.bg-red-100').textContent = stuckCount;
             document.querySelector('#col-completed').previousElementSibling.querySelector('span.bg-green-100').textContent = completedCount;
         }
 
         function updateTaskStatus(taskId, newStatus) {
-            fetch(`/todo/update_status/${taskId}/`, {
+            fetch(`/todo/${taskId}/update-status-ajax/`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: new URLSearchParams({
+                body: JSON.stringify({
                     'status': newStatus
                 })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.status === 'success') {
+                if (data.success) {
                     console.log('Task updated successfully');
                 } else {
-                    console.error('Error updating task:', data.message);
+                    console.error('Error updating task:', data.error);
                     alert('Error saving changes. Please refresh the page.');
                 }
             })
